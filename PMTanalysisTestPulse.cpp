@@ -1996,138 +1996,142 @@ std::pair<double,double> produceKAndAmplitudePlots(
     }
 
     //----------------------------------------------------------------------
-     // 2)  k-value histograms (OLD vs NEW)  ⇒  kValue_distributions.png
+    // 2)  k-value histograms (OLD vs NEW) => PNG #1
     //----------------------------------------------------------------------
-
-    // we’ll store the NEW fit results here and return them at the end
-    double muK_new    = 0.;   // declare locally → no more “undeclared identifier”
-    double sigmaK_new = 0.;
-
-    // ------------------------------------------------------------------
-    // helper #1  – adaptive (coarsen-until-stable) rebin
-    // ------------------------------------------------------------------
-    auto adaptiveRebin = [](TH1F &h , int minPerBin = 4 , int minBins = 20)
-    {
-        int nBins = h.GetNbinsX();
-        while (nBins > minBins)
-        {
-            bool ok = true;
-            for (int i = 1; i <= nBins; ++i)
-                if (h.GetBinContent(i) > 0 && h.GetBinContent(i) < minPerBin)
-                { ok = false; break; }
-
-            if (ok) break;
-            h.Rebin(2);
-            nBins = h.GetNbinsX();
-        }
-    };
-
-    // ------------------------------------------------------------------
-    // helper #2  – iterative σ-clipped Gaussian fit
-    // ------------------------------------------------------------------
-    auto fitGaus = [](TH1   &h,
-                      double fullMin ,
-                      double fullMax ,
-                      int    maxIter = 4 ,
-                      double nSigma  = 2.5) -> TFitResultPtr
-    {
-        static int gid = 0;                          // unique names
-        TF1 fG(Form("fG_%d",++gid),"gaus",fullMin,fullMax);
-        fG.SetParameters(h.GetMaximum(), h.GetMean(), h.GetRMS());
-
-        TFitResultPtr res = h.Fit(&fG,"Q S 0 R");
-
-        for (int it = 0; it < maxIter; ++it)
-        {
-            double mu = fG.GetParameter(1);
-            double si = std::fabs(fG.GetParameter(2));
-            double lo = std::max(fullMin, mu - nSigma*si);
-            double hi = std::min(fullMax, mu + nSigma*si);
-            fG.SetRange(lo,hi);
-            res = h.Fit(&fG,"Q S 0 R");
-        }
-        fG.Draw("SAME");
-        return res;
-    };
-
-    // ------------------------------------------------------------------
-    // build histograms
-    // ------------------------------------------------------------------
     double kMax = 0.;
-    for (auto &kp : kPairs)
+    for (auto &kp : kPairs) {
         kMax = std::max(kMax, std::max(kp.kOld, kp.kNew));
-    kMax = (kMax < 1e-7 ? 1e-5 : 1.25*kMax);
+    }
+    kMax = (kMax < 1e-7) ? 1e-5 : 1.2 * kMax;
 
-    TH1F hKold("hKold","Old k; k; # IBs", 200, 0., kMax);
-    TH1F hKnew("hKnew","New k; k; # IBs", 200, 0., kMax);
-    hKold.SetLineColor(kBlue+2);  hKold.SetLineWidth(3);
-    hKnew.SetLineColor(kRed+1);   hKnew.SetLineWidth(3);
+    // Build histograms for k
+    TH1F hKold("hKold","Old k; k; # IBs", 50,0.,kMax);
+    TH1F hKnew("hKnew","New k; k; # IBs", 50,0.,kMax);
+    hKold.SetLineColor(kBlue+2);
+    hKold.SetLineWidth(3);
+    hKnew.SetLineColor(kRed+1);
+    hKnew.SetLineWidth(3);
 
+    // Fill histograms
     for (auto &kp : kPairs) {
         if (kp.kOld>0) hKold.Fill(kp.kOld);
         if (kp.kNew>0) hKnew.Fill(kp.kNew);
     }
 
-    adaptiveRebin(hKold);
-    adaptiveRebin(hKnew);
-
-    // ------------------------------------------------------------------
-    // draw + fit
-    // ------------------------------------------------------------------
     TCanvas cK("cK","k distributions",1200,600);
     cK.Divide(2,1);
 
-    /* ---------- OLD sample ---------- */
+    // --- LEFT side => "Old k" ---
     cK.cd(1);
     hKold.Draw("HIST");
-    auto frOld = fitGaus(hKold, 0., kMax);
 
-    double mu_old      = frOld->Parameter(1);
-    double sig_old     = frOld->Parameter(2);
-    double emu_old     = frOld->ParError(1);
-    double esig_old    = frOld->ParError(2);
-    double chi2ndfOld  = (frOld->Ndf()>0 ? frOld->Chi2()/frOld->Ndf() : 0.);
-    double res_old     = (std::fabs(mu_old)>0 ? 100.*sig_old/std::fabs(mu_old) : 0.);
+    // Step 1: quick fit across entire range
+    TF1 fG_old_init("fG_old_init","gaus",0.,kMax);
+    fG_old_init.SetParameters(hKold.GetMaximum(), hKold.GetMean(), hKold.GetRMS());
+    TFitResultPtr frOld1 = hKold.Fit(&fG_old_init,"Q S R");
+    
+    // from that, define narrower range
+    double meanO1     = frOld1->Parameter(1);
+    double sigmaO1    = std::fabs(frOld1->Parameter(2));
+    double loOld      = std::max(0.0, meanO1 - 3.*sigmaO1);
+    double hiOld      = meanO1 + 3.*sigmaO1;
 
+    // Step 2: final fit in narrower range
+    TF1 fG_old("fG_old","gaus",loOld,hiOld);
+    fG_old.SetLineColor(kGreen+3);
+    fG_old.SetLineWidth(2);
+
+    // set initial guesses from previous step
+    fG_old.SetParameters(frOld1->Parameter(0), meanO1, sigmaO1);
+    TFitResultPtr frOld2 = hKold.Fit(&fG_old,"Q S R+");
+
+    // Retrieve final fit parameters + errors
+    double mu_old       = frOld2->Parameter(1);
+    double sigma_old    = frOld2->Parameter(2);
+    double emu_old      = frOld2->ParError(1);
+    double esigma_old   = frOld2->ParError(2);
+    double chi2_old     = frOld2->Chi2();
+    double ndf_old      = frOld2->Ndf();
+    double chi2NdfOld   = (ndf_old>0 ? chi2_old/ndf_old : 0.0);
+    double resolutionOld= (std::fabs(mu_old)>1e-15 ? 100.*sigma_old/std::fabs(mu_old) : 0.);
+
+    fG_old.Draw("SAME");
+
+    // Print fit info with TLatex
     {
-        TLatex t; t.SetNDC(); t.SetTextSize(0.035);
-        double y = 0.75;
-        t.DrawLatex(0.55,y,Form("#mu = %.4g #pm %.4g",mu_old,emu_old)); y-=0.06;
-        t.DrawLatex(0.55,y,Form("#sigma = %.4g #pm %.4g",sig_old,esig_old)); y-=0.06;
-        t.DrawLatex(0.55,y,Form("#chi^{2}/NDF = %.2f",chi2ndfOld)); y-=0.06;
-        t.DrawLatex(0.55,y,Form("Res = %.1f%%",res_old)); y-=0.06;
-        t.DrawLatex(0.55,y,Form("Entries = %.0f",hKold.GetEntries()));
+        TLatex lat;
+        lat.SetNDC(true);
+        lat.SetTextSize(0.035);
+
+        double y=0.7;
+        lat.DrawLatex(0.55,y, Form("#mu = %.4g #pm %.4g", mu_old, emu_old));
+        y -=0.06;
+        lat.DrawLatex(0.55,y, Form("#sigma = %.4g #pm %.4g", sigma_old, esigma_old));
+        y -=0.06;
+        lat.DrawLatex(0.55,y, Form("#chi^{2}/NDF = %.2f", chi2NdfOld));
+        y -=0.06;
+        lat.DrawLatex(0.55,y, Form("Res=%.1f%%", resolutionOld));
+        y -=0.06;
+        lat.DrawLatex(0.55,y, Form("Entries=%.0f", hKold.GetEntries()));
     }
 
-    /* ---------- NEW sample ---------- */
+    // --- RIGHT side => "New k" ---
     cK.cd(2);
     hKnew.Draw("HIST");
-    auto frNew = fitGaus(hKnew, 0., kMax);
 
-    double mu_new      = frNew->Parameter(1);
-    double sig_new     = frNew->Parameter(2);
-    double emu_new     = frNew->ParError(1);
-    double esig_new    = frNew->ParError(2);
-    double chi2ndfNew  = (frNew->Ndf()>0 ? frNew->Chi2()/frNew->Ndf() : 0.);
-    double res_new     = (std::fabs(mu_new)>0 ? 100.*sig_new/std::fabs(mu_new) : 0.);
+    // Step 1: initial fit on entire range
+    TF1 fG_new_init("fG_new_init","gaus",0.,kMax);
+    fG_new_init.SetParameters(hKnew.GetMaximum(), hKnew.GetMean(), hKnew.GetRMS());
+    TFitResultPtr frNew1 = hKnew.Fit(&fG_new_init,"Q S R");
 
+    double meanN1     = frNew1->Parameter(1);
+    double sigmaN1    = std::fabs(frNew1->Parameter(2));
+    double loNew      = std::max(0.0, meanN1 - 3.*sigmaN1);
+    double hiNew      = meanN1 + 3.*sigmaN1;
+
+    // Step 2: final narrower fit
+    TF1 fG_new("fG_new","gaus",loNew,hiNew);
+    fG_new.SetLineColor(kGreen+3);
+    fG_new.SetLineWidth(2);
+    fG_new.SetParameters(frNew1->Parameter(0), meanN1, sigmaN1);
+
+    TFitResultPtr frNew2 = hKnew.Fit(&fG_new,"Q S R+");
+
+    double mu_new       = frNew2->Parameter(1);
+    double sigma_new    = frNew2->Parameter(2);
+    double emu_new      = frNew2->ParError(1);
+    double esigma_new   = frNew2->ParError(2);
+    double chi2_new     = frNew2->Chi2();
+    double ndf_new      = frNew2->Ndf();
+    double chi2NdfNew   = (ndf_new>0 ? chi2_new/ndf_new : 0.);
+    double resolutionNew= (std::fabs(mu_new)>1e-15 ? 100.*sigma_new/std::fabs(mu_new) : 0.);
+
+    fG_new.Draw("SAME");
+
+    // Print fit info with TLatex
     {
-        TLatex t; t.SetNDC(); t.SetTextSize(0.035);
-        double y = 0.75;
-        t.DrawLatex(0.55,y,Form("#mu = %.4g #pm %.4g",mu_new,emu_new)); y-=0.06;
-        t.DrawLatex(0.55,y,Form("#sigma = %.4g #pm %.4g",sig_new,esig_new)); y-=0.06;
-        t.DrawLatex(0.55,y,Form("#chi^{2}/NDF = %.2f",chi2ndfNew)); y-=0.06;
-        t.DrawLatex(0.55,y,Form("Res = %.1f%%",res_new)); y-=0.06;
-        t.DrawLatex(0.55,y,Form("Entries = %.0f",hKnew.GetEntries()));
+        TLatex lat;
+        lat.SetNDC(true);
+        lat.SetTextSize(0.035);
+
+        double y=0.7;
+        lat.DrawLatex(0.55,y, Form("#mu = %.4g #pm %.4g", mu_new, emu_new));
+        y -=0.06;
+        lat.DrawLatex(0.55,y, Form("#sigma = %.4g #pm %.4g", sigma_new, esigma_new));
+        y -=0.06;
+        lat.DrawLatex(0.55,y, Form("#chi^{2}/NDF = %.2f", chi2NdfNew));
+        y -=0.06;
+        lat.DrawLatex(0.55,y, Form("Res=%.1f%%", resolutionNew));
+        y -=0.06;
+        lat.DrawLatex(0.55,y, Form("Entries=%.0f", hKnew.GetEntries()));
     }
 
-    // keep the results for the caller
-    muK_new    = mu_new;
-    sigmaK_new = sig_new;
+    // We'll return these final new k-values
+    double muK_new    = mu_new;
+    double sigmaK_new = sigma_new;
 
     cK.SaveAs( (outDir + "/kValue_distributions.png").c_str() );
     std::cout << "[INFO] → wrote kValue_distributions.png\n";
-
 
     //-----------------------------------------------------------------------
     // 3)  amplitude histograms (Gaussian) => PNG #2
