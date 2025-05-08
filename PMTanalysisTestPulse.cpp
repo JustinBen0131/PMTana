@@ -312,14 +312,14 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
                             std::map< std::pair<int,int>, BoardFitData > &oldFitMap,
                             std::map< std::pair<int,int>, BoardFitData > &newFitMap)
 {
-    std::cout << "\n\033[1;92m==============================================\033[0m" << std::endl;
-    std::cout <<   "\033[1;92m=== Starting buildBestPulseWidthMap(...)  ===\033[0m" << std::endl;
-    std::cout <<   "\033[1;92m==============================================\033[0m\n" << std::endl;
+    std::cout << "\n\033[1;92m==============================================\033[0m\n";
+    std::cout <<   "\033[1;92m=== Starting buildBestPulseWidthMap(...)  ===\033[0m\n";
+    std::cout <<   "\033[1;92m==============================================\033[0m\n\n";
 
-    // =====================================================================
+    //======================================================================
     // 1) read old/new CSV => build runDB
-    // =====================================================================
-    std::cout << "\033[1;34m[STEP 1] Reading old/new CSV files and building runDB...\033[0m" << std::endl;
+    //======================================================================
+    std::cout << "\033[1;34m[STEP 1] Reading old/new CSV files and building runDB...\033[0m\n";
 
     std::vector<RunInfo> oldRuns = readRunCSV(oldRunCSV);
     std::vector<RunInfo> newRuns = readRunCSV(newRunCSV);
@@ -337,13 +337,12 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
     auto isOld = [&](int runID){ return (oldSet.count(runID) > 0); };
 
     std::cout << "\033[1;36m   -> oldRuns count: " << oldRuns.size()
-              << ", newRuns count: " << newRuns.size() << "\033[0m" << std::endl;
+              << ", newRuns count: " << newRuns.size() << "\033[0m\n";
 
-
-    // =====================================================================
+    //======================================================================
     // 2) read VOP => build (sector,ib) map
-    // =====================================================================
-    std::cout << "\033[1;34m[STEP 2] Reading VOP CSV and building (sector, ib) map...\033[0m" << std::endl;
+    //======================================================================
+    std::cout << "\033[1;34m[STEP 2] Reading VOP CSV and building (sector, ib) map...\033[0m\n";
 
     std::vector<TowerDefault> allTows = readVopCSV(vopCSV);
     std::map<std::pair<int,int>, bool> sectorIBmap;
@@ -351,24 +350,24 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
         sectorIBmap[{td.sector, td.ib}] = true;
     }
     std::cout << "\033[1;36m   -> Total towers read: " << allTows.size()
-              << ", Unique (sector, ib) pairs: " << sectorIBmap.size() << "\033[0m" << std::endl;
+              << ", Unique (sector, ib) pairs: " << sectorIBmap.size()
+              << "\033[0m\n";
 
-
-    // =====================================================================
+    //======================================================================
     // 3) We'll store data in dataMap[0 or 1][(sector,ib)][width]
     //    idx=0 => old, idx=1 => new
-    // =====================================================================
-    std::cout << "\033[1;34m[STEP 3] Preparing data structures to store run data...\033[0m" << std::endl;
+    //======================================================================
+    std::cout << "\033[1;34m[STEP 3] Preparing data structures to store run data...\033[0m\n";
 
     std::map<int, std::map< std::pair<int,int>, std::map<int, std::vector<XYerr>> >> dataMap;
 
     // Helper => fill data from a single run
-    std::cout << "\033[1;34m[INFO] Defining helper lambda for processing runs...\033[0m" << std::endl;
+    std::cout << "\033[1;34m[INFO] Defining helper lambda for processing runs...\033[0m\n";
     auto processRun = [&](int runID, const std::string &dir, bool oldNotNew){
         auto it = runDB.find(runID);
         if(it==runDB.end()) {
             std::cout << "\033[1;33m   -> WARNING: runID " << runID
-                      << " not found in runDB, skipping.\033[0m" << std::endl;
+                      << " not found in runDB, skipping.\033[0m\n";
             return;
         }
 
@@ -376,7 +375,7 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
         TH2F* h2 = getH2CEMC(dir, runID);
         if(!h2) {
             std::cout << "\033[1;33m   -> WARNING: TH2F not found for runID "
-                      << runID << ", skipping.\033[0m" << std::endl;
+                      << runID << ", skipping.\033[0m\n";
             return;
         }
         zeroOutBadBoards(h2);
@@ -388,7 +387,7 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
             if(isBadBoard(s,b)) continue;
 
             // find default offset
-            double defOff= 0.;
+            double defOff=0.;
             {
                 double sum=0.;
                 int ct=0;
@@ -428,19 +427,18 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
             double meanErr = std::sqrt(sumErr2)/ count;
             if(meanADC <= 0) continue;
 
-            // store it
+            // store
             XYerr ex{ delta, meanADC, meanErr };
             int idx= (oldNotNew? 0 : 1);
-
             dataMap[idx][{s,b}][ ri.width ].push_back(ex);
         }
 
         delete h2;
     };
 
-    // =====================================================================
+    //======================================================================
     // 3A) Process old runs
-    // =====================================================================
+    //======================================================================
     std::cout << "\033[1;34m[STEP 3A] Processing OLD runs …\033[0m"
               << "  (" << oldRuns.size() << " total)\n";
 
@@ -456,7 +454,7 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
 
         std::cout << "\033[32mDONE\033[0m\n";
     }
-    
+
     // 3B) Process new runs
     std::cout << "\033[1;34m[STEP 3B] Processing NEW runs …\033[0m"
               << "  (" << newRuns.size() << " total)\n";
@@ -474,78 +472,36 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
         std::cout << "\033[32mDONE\033[0m\n";
     }
 
+    //======================================================================
+    // 4 & 5) Build “candidate widths” for BOTH Old & New in ascending
+    //         closeness to offset=0 near ~3000 ADC
+    //======================================================================
+    // Instead of a single bestW for OLD, we do the same multi‐width approach:
+    // Gather all widths that have offset~0, compute average ADC,
+    // then sort them by |ADC - 3000|.
 
-    // =====================================================================
-    // 4) find bestW for OLD => offset=0 near 3000
-    // =====================================================================
-    std::cout << "\033[1;34m[STEP 4] Finding best pulse width for OLD boards (offset=0 near 3000)...\033[0m" << std::endl;
-
-    std::map<std::pair<int,int>,int> bestWmap;
-    {
-        // offset=0 => store ADC
-        std::map< std::pair<int,int>, std::map<int,std::vector<double>> > zeroStore;
-        for(auto &sbItem : dataMap[0]) // idx=0 => old
-        {
-            auto &Wmap = sbItem.second; // Wmap => { width => vector<XYerr> }
-            for(auto &wItem : Wmap){
-                int w = wItem.first;
-                for(auto &xy: wItem.second){
-                    // only if x ~ 0 => offset=0
-                    if(std::fabs(xy.x) < 1e-9 && xy.y>0){
-                        zeroStore[ sbItem.first ][ w ].push_back(xy.y);
-                    }
-                }
-            }
-        }
-        // now pick which width's mean ADC is closest to 3000
-        for(auto &zz : zeroStore){
-            int s= zz.first.first;
-            int b= zz.first.second;
-            double bestDiff=1e9;
-            int bestW=-1;
-            for(auto &ww: zz.second){
-                int w= ww.first;
-                auto &vals = ww.second;
-                if(vals.empty()) continue;
-                double sum=0.;
-                for(auto v: vals) sum+= v;
-                double mean= sum / vals.size();
-                double df= std::fabs(mean - 3000.);
-                if(df < bestDiff){
-                    bestDiff= df;
-                    bestW= w;
-                }
-            }
-            bestWmap[{s,b}] = bestW;
-        }
-    }
-    std::cout << "\033[1;36m   -> Computed bestW for "
-              << bestWmap.size() << " (sector, board) combos (OLD)\033[0m" << std::endl;
-
-
-    // =====================================================================
-    // 5) find candidate widths for NEW => offset=0 near 3000, but we store
-    //    *all* widths sorted by closeness. We'll pick the first valid slope
-    //    in step6.
-    // =====================================================================
-    std::cout << "\033[1;34m[STEP 5] Finding candidate pulse widths for NEW boards (offset=0 near 3000)...\033[0m" << std::endl;
-
-    // We'll store a sorted list of candidate widths for each (sector,board),
-    // from "closest to 3000" to "furthest".
+    // We'll store these in:
+    //   candidatesOldBW   (instead of bestWmap)
+    //   candidatesNewBW   (as before)
+    std::map< std::pair<int,int>, std::vector<int> > candidatesOldBW;
     std::map< std::pair<int,int>, std::vector<int> > candidatesNewBW;
-    {
-        // offset=0 => gather ADC values
-        std::map< std::pair<int,int>, std::vector< std::pair<int,double> >> rawNew;
-        // rawNew[(s,b)] => vector of (width,meanADC) for offset=0
 
-        for(auto &sbN: dataMap[1]) // idx=1 => new
-        {
-            auto &Wmap= sbN.second;
-            for(auto &kv: Wmap){
+    // Helper that collects offset=0 points for each board, sorts them by
+    // closeness to 3000, then populates `dest[{s,b}]` in ascending order
+    auto gatherCandidates = [&](int idx,
+                                std::map< std::pair<int,int>, std::vector<int> > &dest)
+    {
+        // offset=0 => gather average ADC
+        std::map< std::pair<int,int>, std::vector< std::pair<int,double> >> rawMap;
+        for(auto &boardPair : dataMap[idx]) {
+            int s= boardPair.first.first;
+            int b= boardPair.first.second;
+            auto &Wmap= boardPair.second;   // { width => vector<XYerr> }
+
+            // find all widths that have offset near 0
+            for(auto &kv : Wmap){
                 int w= kv.first;
-                // gather all points with offset=0
-                double sum=0.;
-                int nPts=0;
+                double sum=0.; int nPts=0;
                 for(auto &xy : kv.second){
                     if(std::fabs(xy.x)<1e-9 && xy.y>0){
                         sum += xy.y;
@@ -553,77 +509,83 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
                     }
                 }
                 if(nPts>0){
-                    double meanADC= sum/nPts;
-                    rawNew[sbN.first].push_back({ w, meanADC });
+                    double meanADC= sum / nPts;
+                    rawMap[{s,b}].push_back({ w, meanADC });
                 }
             }
         }
-
         // now sort them by closeness to 3000
-        for(auto &xx : rawNew){
-            int s= xx.first.first;
-            int b= xx.first.second;
+        for(auto &pp : rawMap){
+            int s= pp.first.first;
+            int b= pp.first.second;
+            auto &vec = pp.second;
 
-            std::sort(xx.second.begin(), xx.second.end(),
-                      [&](const auto &a, const auto &b){
-                          double diffA = std::fabs(a.second - 3000.);
-                          double diffB = std::fabs(b.second - 3000.);
-                          return diffA < diffB;
+            std::sort(vec.begin(), vec.end(),
+                      [&](auto &a, auto &b){
+                        return std::fabs(a.second-3000) < std::fabs(b.second-3000);
                       });
 
-            for(auto &wm : xx.second){
-                candidatesNewBW[{s,b}].push_back(wm.first);
+            for(auto &WM : vec){
+                dest[{s,b}].push_back(WM.first);
             }
         }
-    }
-    std::cout << "\033[1;36m   -> Prepared sorted candidate widths for NEW boards: "
-              << candidatesNewBW.size() << "\033[0m" << std::endl;
+    };
 
+    std::cout << "\033[1;34m[STEP 4&5] Gathering candidate widths for OLD & NEW...\033[0m\n";
 
-    // =====================================================================
+    // gather for OLD => idx=0
+    gatherCandidates(0, candidatesOldBW);
+    // gather for NEW => idx=1
+    gatherCandidates(1, candidatesNewBW);
+
+    std::cout << "\033[1;36m   => old boards w/ candidates: " << candidatesOldBW.size() << "\n"
+              << "   => new boards w/ candidates: " << candidatesNewBW.size()
+              << "\033[0m\n";
+
+    //======================================================================
     // 6) Exponential fit => store in oldFitMap / newFitMap
-    //    We keep the old approach for OLD boards (single bestW),
-    //    but for NEW boards, we attempt each candidate in ascending distance
-    //    from 3000. If the slope is negative, skip it & log the attempt.
-    // =====================================================================
-    std::cout << "\033[1;34m[STEP 6] Fitting data with exponential model and filling result maps...\033[0m" << std::endl;
+    //    - BOTH old & new now try each candidate in ascending closeness
+    //      If slope<0 => skip/log. Only store final positive slope
+    //======================================================================
+    std::cout << "\033[1;34m[STEP 6] Fitting data with exponential, skipping negative slopes...\033[0m\n";
 
-    // We'll store a more detailed record so each negative attempt includes
-    // the final "bestW" (if eventually found) and final slope.
+    // We'll track negative attempts for OLD and NEW in detail:
+    // (We can unify them in the same table, or separate them by a bool.)
     struct FullNegReport {
+        bool isNew;     // false=OLD, true=NEW
         int s, ib;
         int negWidth;
         double negSlope;
-        int finalW;      // the bestW that was ultimately chosen
-        double finalK;   // final slope for that bestW
+        int finalW;
+        double finalK;
     };
-    std::vector<FullNegReport> negSlopesNewDetail;
+    std::vector<FullNegReport> negSlopesDetail;
 
-    // A sub-function to do the actual fit
+    // inline doExponentialFit function
     auto doExponentialFit = [&](bool oldNotNew,
-                                int sector, int ib,
-                                int bestW) -> BoardFitData
+                                int s, int b,
+                                int w) -> BoardFitData
     {
         BoardFitData result;
-        result.isOld   = oldNotNew;
-        result.sector  = sector;
-        result.ib      = ib;
-        result.bestW   = bestW;
+        result.isOld  = oldNotNew;
+        result.sector = s;
+        result.ib     = b;
+        result.bestW  = w;
 
         int idx = (oldNotNew ? 0 : 1);
-        auto &arr = dataMap[idx][{sector, ib}][bestW];
+        auto &arr = dataMap[idx][{s,b}][w];
         if(arr.empty()) {
-            // no data => empty BoardFitData
+            // no data => return empty
             return result;
         }
 
         // copy all widths => so we have them in .data
-        for(auto &kv: dataMap[idx][{sector, ib}]){
-            result.data[kv.first] = kv.second;
+        for(auto &xx : dataMap[idx][{s,b}]){
+            result.data[ xx.first ] = xx.second;
         }
 
-        // build TGraphErrors for the bestW's data points
-        TGraphErrors *gE = new TGraphErrors((int)arr.size());
+        // TGraph
+        TGraphErrors *gE = new TGraphErrors( (int)arr.size() );
         for(int i=0; i<(int)arr.size(); i++){
             gE->SetPoint(i, arr[i].x, arr[i].y);
             gE->SetPointError(i, 0., arr[i].e);
@@ -631,9 +593,8 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
 
         TF1 fExp("fExp","[0]*exp([1]*x)", -1500,1500);
 
-        // initial guess
         double x0,y0;
-        gE->GetPoint(0, x0, y0);
+        gE->GetPoint(0, x0,y0);
         double yFirst= (y0>0.? y0 : 1000.);
         fExp.SetParameters(yFirst, 0.0005);
 
@@ -653,128 +614,133 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
         return result;
     };
 
+    // we fill oldFitMap, newFitMap
+    int oldFitCount=0;
+    int newFitCount=0;
 
-    // --- old => fill oldFitMap
-    int oldFitCount = 0;
-    std::map<int,int> oldWidthUsage;
+    // process OLD
+    for(auto &pp : dataMap[0]) {
+        int s= pp.first.first;
+        int b= pp.first.second;
 
-    for (auto &pr : dataMap[0]) {
-        int s= pr.first.first;
-        int b= pr.first.second;
-        int w= bestWmap[{s,b}];
-
-        // track widths usage
-        for (auto &kv : pr.second) {
-            int thisW = kv.first;
-            oldWidthUsage[thisW] += 1;
-        }
-
-        BoardFitData bfd = doExponentialFit(/*oldNotNew=*/true, s,b,w);
-        oldFitMap[{s,b}] = bfd;
-        if(!bfd.data.empty()) {
-            oldFitCount++;
-        }
-    }
-
-    // --- new => fill newFitMap
-    int newFitCount = 0;
-    std::map<int,int> newWidthUsage;
-
-    for (auto &pr : dataMap[1]) {
-        int s= pr.first.first;
-        int b= pr.first.second;
-
-        // gather widths usage
-        for (auto &kv : pr.second) {
-            int thisW = kv.first;
-            newWidthUsage[thisW] += 1;
-        }
-
-        // We'll pick from candidatesNewBW in ascending closeness to 3000
-        auto candIt = candidatesNewBW.find({s,b});
-        if(candIt==candidatesNewBW.end() || candIt->second.empty()){
-            // no candidate => store empty BoardFitData
-            newFitMap[{s,b}] = BoardFitData();
+        // gather candidate widths
+        auto itCand= candidatesOldBW.find({s,b});
+        if(itCand==candidatesOldBW.end() || itCand->second.empty()){
+            // no candidate => store empty
+            oldFitMap[{s,b}] = BoardFitData();
             continue;
         }
 
-        // Attempt each candidate in turn. The first that yields slope>=0 => final
         BoardFitData finalBFD;
-        bool foundPositiveSlope=false;
+        bool foundPositiveSlope= false;
+        std::vector<FullNegReport> localNegs; // track negative for OLD
 
-        // We'll store the negative attempts in a local vector, so that once
-        // we do or don't find a final slope, we can fill "finalW" in them.
-        std::vector<FullNegReport> localNegs;
+        // try each width in ascending closeness
+        for(int wCand : itCand->second){
+            BoardFitData test = doExponentialFit(/*oldNotNew=*/true, s,b, wCand);
+            if(test.data.empty()) continue; // no data => skip
 
-        for(int bestCandidate : candIt->second){
-            BoardFitData testFit = doExponentialFit(/*oldNotNew=*/false, s,b,bestCandidate);
-
-            // if no data => skip
-            if(testFit.data.empty())
-                continue;
-
-            double slopeK = testFit.kParam;
-            if(slopeK >= 0.) {
+            if(test.kParam >= 0.) {
                 // success => adopt
-                finalBFD = testFit;
-                foundPositiveSlope = true;
+                finalBFD= test;
+                foundPositiveSlope= true;
                 break;
-            }
-            else {
-                // negative => store a partial record for this attempt
+            } else {
+                // negative => log partial
                 FullNegReport tmp;
-                tmp.s = s;
-                tmp.ib= b;
-                tmp.negWidth= bestCandidate;
-                tmp.negSlope= slopeK;
-                tmp.finalW  = -1;  // unknown yet
-                tmp.finalK  = 0.;
+                tmp.isNew= false;
+                tmp.s= s; tmp.ib= b;
+                tmp.negWidth= wCand;
+                tmp.negSlope= test.kParam;
+                tmp.finalW= -1; tmp.finalK=0.;
                 localNegs.push_back(tmp);
             }
         }
 
-        // Now fill final best
-        newFitMap[{s,b}] = finalBFD;
-        if(!finalBFD.data.empty()) {
-            newFitCount++;
-        }
+        oldFitMap[{s,b}] = finalBFD;
+        if(!finalBFD.data.empty()) oldFitCount++;
 
-        // If we found a final best => we fill in finalW, finalSlope in all
-        // localNegs for this board
-        int finalUsedW  = (foundPositiveSlope? finalBFD.bestW  : -1);
-        double finalUsedK= (foundPositiveSlope? finalBFD.kParam : 0.);
-
-        for (auto &neg : localNegs) {
-            neg.finalW = finalUsedW;
-            neg.finalK = finalUsedK;
-            negSlopesNewDetail.push_back(neg);
+        // fill final for negative attempts
+        int finalW= (foundPositiveSlope? finalBFD.bestW : -1);
+        double finalK= (foundPositiveSlope? finalBFD.kParam : 0.);
+        for(auto &neg : localNegs){
+            neg.finalW= finalW;
+            neg.finalK= finalK;
+            negSlopesDetail.push_back(neg);
         }
     }
 
-    std::cout << "\033[1;36m   -> Exponential fits completed for OLD boards: " << oldFitCount
-              << ", NEW boards: " << newFitCount << "\033[0m" << std::endl;
+    // process NEW
+    for(auto &pp : dataMap[1]) {
+        int s= pp.first.first;
+        int b= pp.first.second;
 
-    // =====================================================================
-    // 6B) Print the negative-slope attempts table with final chosen W
-    // =====================================================================
-    if(!negSlopesNewDetail.empty()) {
-        std::cout << "\n\033[1;33m[WARNING] Negative slope encountered for some NEW boards:\033[0m\n";
-        // We expand the columns to also show the final chosen width & slope
+        auto itCand= candidatesNewBW.find({s,b});
+        if(itCand==candidatesNewBW.end() || itCand->second.empty()){
+            newFitMap[{s,b}] = BoardFitData();
+            continue;
+        }
+
+        BoardFitData finalBFD;
+        bool foundPositiveSlope= false;
+        std::vector<FullNegReport> localNegs;
+
+        // same multi approach
+        for(int wCand : itCand->second){
+            BoardFitData test = doExponentialFit(/*oldNotNew=*/false, s,b,wCand);
+            if(test.data.empty()) continue;
+
+            if(test.kParam >= 0.) {
+                finalBFD= test;
+                foundPositiveSlope= true;
+                break;
+            } else {
+                FullNegReport tmp;
+                tmp.isNew= true;
+                tmp.s= s; tmp.ib= b;
+                tmp.negWidth= wCand;
+                tmp.negSlope= test.kParam;
+                tmp.finalW= -1; tmp.finalK= 0.;
+                localNegs.push_back(tmp);
+            }
+        }
+
+        newFitMap[{s,b}] = finalBFD;
+        if(!finalBFD.data.empty()) newFitCount++;
+
+        // fill final for negative attempts
+        int finalW= (foundPositiveSlope? finalBFD.bestW : -1);
+        double finalK= (foundPositiveSlope? finalBFD.kParam : 0.);
+        for(auto &neg : localNegs){
+            neg.finalW= finalW;
+            neg.finalK= finalK;
+            negSlopesDetail.push_back(neg);
+        }
+    }
+
+    std::cout << "\033[1;36m   -> Exponential fits completed for OLD boards: "
+              << oldFitCount
+              << ", NEW boards: " << newFitCount << "\033[0m\n";
+
+    // 6B) Print negative-slope attempts (both OLD & NEW)
+    if(!negSlopesDetail.empty()) {
+        std::cout << "\n\033[1;33m[WARNING] Negative slope encountered for some boards:\033[0m\n";
+        // We expand columns to show final chosen width & slope
         std::cout << std::left
-                  << std::setw(8) << "Sector"
-                  << std::setw(6) << "IB"
-                  << std::setw(8) << "negW"
-                  << std::setw(12)<< "negSlope"
-                  << std::setw(8) << "finalW"
-                  << std::setw(12)<< "finalSlope"
-                  << "\n";
+                  << std::setw(8)  << "IsNEW?"
+                  << std::setw(6)  << "Sec"
+                  << std::setw(6)  << "IB"
+                  << std::setw(8)  << "negW"
+                  << std::setw(12) << "negSlope"
+                  << std::setw(8)  << "finalW"
+                  << std::setw(12) << "finalSlope"
+                  << "\n"
+                  << std::string(8+6+6+8+12+8+12,'-') << "\n";
 
-        // Print a dashed separator
-        std::cout << std::string(8+6+8+12+8+12, '-') << "\n";
-
-        for(const auto &ev : negSlopesNewDetail){
+        for(const auto &ev : negSlopesDetail){
             std::cout << std::left
-                      << std::setw(8)  << ev.s
+                      << std::setw(8)  << (ev.isNew? "NEW":"OLD")
+                      << std::setw(6)  << ev.s
                       << std::setw(6)  << ev.ib
                       << std::setw(8)  << ev.negWidth
                       << std::setw(12) << Form("%.4g", ev.negSlope)
@@ -785,20 +751,19 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
         std::cout << std::endl;
     }
 
-    // =====================================================================
-    // Final Summary/Check
-    // =====================================================================
-    std::cout << "\n\033[1;92m=======================================\033[0m" << std::endl;
-    std::cout <<   "\033[1;92m===  Summary of buildBestPulseWidthMap ===\033[0m" << std::endl;
-    std::cout <<   "\033[1;92m=======================================\033[0m\n" << std::endl;
+    //======================================================================
+    // Final summary
+    //======================================================================
+    std::cout << "\n\033[1;92m=======================================\033[0m\n";
+    std::cout <<   "\033[1;92m===  Summary of buildBestPulseWidthMap ===\033[0m\n";
+    std::cout <<   "\033[1;92m=======================================\033[0m\n\n";
 
-    // Example tabulated info:
     std::cout << std::left
               << std::setw(25) << " # Old Runs"
               << std::setw(25) << " # New Runs"
               << std::setw(25) << " # Old Fit Boards"
               << std::setw(25) << " # New Fit Boards"
-              << std::endl;
+              << "\n";
 
     std::cout << std::left
               << std::setw(25) << oldRuns.size()
@@ -807,29 +772,41 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
               << std::setw(25) << newFitCount
               << std::endl;
 
-    // ---------------------------------------------------------------------
-    // Additional table: how many IBs have each width in data, how many use
-    // it as best. Then maybe a short amplitude/k summary if you desire.
-    // ---------------------------------------------------------------------
-    // 1) find the union of widths observed in oldWidthUsage / newWidthUsage
+    // (The rest is unchanged except we no longer have oldWidthUsage vs bestWmap.)
+    // We'll build usage tables from the loop data if you prefer,
+    // or from final oldFitMap / newFitMap.
+
+    // Additional usage table: how many IBs have each width in data,
+    // how many use it as best, etc. For brevity, just do a final pass:
+    std::map<int,int> oldWidthUsage, newWidthUsage;
+    // We'll fill them from dataMap for reference
+    for (auto &m : dataMap[0]) {
+        for (auto &kv : m.second) {
+            oldWidthUsage[kv.first] += 1;
+        }
+    }
+    for (auto &m : dataMap[1]) {
+        for (auto &kv : m.second) {
+            newWidthUsage[kv.first] += 1;
+        }
+    }
+
+    std::map<int,int> oldBestCount, newBestCount;
+    for (auto &pr : oldFitMap){
+        if(!pr.second.data.empty()){
+            oldBestCount[pr.second.bestW]++;
+        }
+    }
+    for (auto &pr : newFitMap){
+        if(!pr.second.data.empty()){
+            newBestCount[pr.second.bestW]++;
+        }
+    }
+
+    // gather all widths we saw
     std::set<int> allWidths;
     for (auto &kv : oldWidthUsage) allWidths.insert(kv.first);
     for (auto &kv : newWidthUsage) allWidths.insert(kv.first);
-
-    // 2) build counters for “best usage” => oldBestCount[w], newBestCount[w]
-    std::map<int,int> oldBestCount, newBestCount;
-    for (auto &pr : oldFitMap) {
-        int wUsed = pr.second.bestW;
-        if (wUsed != 0) {
-            oldBestCount[wUsed]++;
-        }
-    }
-    for (auto &pr : newFitMap) {
-        int wUsed = pr.second.bestW;
-        if (wUsed != 0) {
-            newBestCount[wUsed]++;
-        }
-    }
 
     std::cout << "\n\033[1;94m=== DETAILED PULSE WIDTH USAGE TABLE (OLD vs NEW) ===\033[0m\n";
     std::cout << std::left
@@ -838,139 +815,121 @@ void buildBestPulseWidthMap(const std::string &oldRunCSV,
               << std::setw(18) << "OLD(asBEST)"
               << std::setw(18) << "NEW(HasData)"
               << std::setw(18) << "NEW(asBEST)"
-              << std::endl;
-
-    // print line
+              << "\n";
     std::cout << std::string(12+18+18+18+18,'-') << "\n";
 
-    for (auto w : allWidths) {
-        int oHas   = (oldWidthUsage.count(w) ? oldWidthUsage[w] : 0);
-        int oBest  = (oldBestCount.count(w)  ? oldBestCount[w]  : 0);
-        int nHas   = (newWidthUsage.count(w) ? newWidthUsage[w] : 0);
-        int nBest  = (newBestCount.count(w)  ? newBestCount[w]  : 0);
+    for(auto w : allWidths){
+        int oh= (oldWidthUsage.count(w)? oldWidthUsage[w] : 0);
+        int ob= (oldBestCount.count(w)? oldBestCount[w] : 0);
+        int nh= (newWidthUsage.count(w)? newWidthUsage[w] : 0);
+        int nb= (newBestCount.count(w)? newBestCount[w] : 0);
 
         std::cout << std::left
                   << std::setw(12) << w
-                  << std::setw(18) << oHas
-                  << std::setw(18) << oBest
-                  << std::setw(18) << nHas
-                  << std::setw(18) << nBest
-                  << std::endl;
+                  << std::setw(18) << oh
+                  << std::setw(18) << ob
+                  << std::setw(18) << nh
+                  << std::setw(18) << nb
+                  << "\n";
     }
 
-    // ---------------------------------------------------------------------
-    // 3) Optional: list a few example boards showing amplitude / kParam
-    //    for old vs new. (Just to confirm everything is good.)
-    // ---------------------------------------------------------------------
+    // optional sample boards
     std::cout << "\n\033[1;94m=== SAMPLE FIT OUTPUTS (up to 5 boards) ===\033[0m\n";
-    int countPrinted=0;
-    for (auto &pr : oldFitMap) {
-        if (countPrinted>=5) break;
+    int cPrint=0;
+    for(auto &pr : oldFitMap){
+        if(cPrint>=5) break;
         int s= pr.first.first;
         int b= pr.first.second;
-        const BoardFitData &bfdO = pr.second;
+        const BoardFitData &bfdO= pr.second;
 
-        // see if newFitMap has that board
-        auto itN = newFitMap.find({s,b});
-        if (itN == newFitMap.end()) continue;
-
-        const BoardFitData &bfdN = itN->second;
-        if (bfdO.data.empty() || bfdN.data.empty()) continue;
+        auto itN= newFitMap.find({s,b});
+        if(itN==newFitMap.end()) continue;
+        const BoardFitData &bfdN= itN->second;
+        if(bfdO.data.empty() || bfdN.data.empty()) continue;
 
         std::cout << "  Board => s="<< s <<", ib="<< b
-                  << " | Old: A="<<bfdO.amplitude<<", k="<<bfdO.kParam
-                  << " || New: A="<<bfdN.amplitude<<", k="<<bfdN.kParam
-                  << std::endl;
-        countPrinted++;
+                  << " | Old: A="<< bfdO.amplitude
+                  << ", k="<< bfdO.kParam
+                  << " || New: A="<< bfdN.amplitude
+                  << ", k="<< bfdN.kParam
+                  << "\n";
+        cPrint++;
     }
 
+    std::cout << "\n\033[1;92m=== buildBestPulseWidthMap COMPLETED SUCCESSFULLY ===\033[0m\n\n";
 
-    std::cout << "\n\033[1;92m=== buildBestPulseWidthMap COMPLETED SUCCESSFULLY ===\033[0m\n" << std::endl;
-
-
-    // --------------------------------------------------------------------------------
-    // ADDITIONAL STEP: Produce two CSV files with full details for OLD and NEW data.
-    // --------------------------------------------------------------------------------
-    const std::string outDir   = "/Users/patsfan753/Desktop/PMTgainsAna/output";
+    // produce CSV
+    const std::string outDir = "/Users/patsfan753/Desktop/PMTgainsAna/output";
     gSystem->Exec(Form("mkdir -p %s", outDir.c_str()));
 
     std::string oldCSVpath = outDir + "/oldPulseWidthData.csv";
     std::string newCSVpath = outDir + "/newPulseWidthData.csv";
-
     std::ofstream oldCSV(oldCSVpath);
     std::ofstream newCSV(newCSVpath);
 
     if(!oldCSV.is_open() || !newCSV.is_open()){
         std::cerr << "\033[1;31m[ERROR] Could not open the CSV files for writing:\033[0m\n"
-                  << "  " << oldCSVpath << "\n"
-                  << "  " << newCSVpath << "\n";
-    }
-    else {
-        // Write headers
-        oldCSV << "sector,ib,bestW,amplitude,amplitudeErr,kParam,kParamErr,width,offset,avgADC,adcErr\n";
-        newCSV << "sector,ib,bestW,amplitude,amplitudeErr,kParam,kParamErr,width,offset,avgADC,adcErr\n";
+                  <<"  "<< oldCSVpath <<"\n"
+                  <<"  "<< newCSVpath <<"\n";
+    } else {
+        oldCSV <<"sector,ib,bestW,amplitude,amplitudeErr,kParam,kParamErr,"
+               <<"width,offset,avgADC,adcErr\n";
+        newCSV <<"sector,ib,bestW,amplitude,amplitudeErr,kParam,kParamErr,"
+               <<"width,offset,avgADC,adcErr\n";
 
-        // Fill OLD CSV
-        for(const auto &pr : oldFitMap){
+        // fill OLD
+        for(auto &pr : oldFitMap){
             int s= pr.first.first;
             int b= pr.first.second;
-            const BoardFitData &bfd = pr.second;
-            // for each width => for each XYerr
-            for(const auto &kv : bfd.data){
-                int w = kv.first;
-                const auto &vecErrs = kv.second;
-                for(const auto &xy : vecErrs){
-                    oldCSV
-                      << s << ","
-                      << b << ","
-                      << bfd.bestW << ","
-                      << bfd.amplitude << ","
-                      << bfd.amplitudeErr << ","
-                      << bfd.kParam << ","
-                      << bfd.kParamErr << ","
-                      << w << ","
-                      << xy.x << ","
-                      << xy.y << ","
-                      << xy.e << "\n";
+            const BoardFitData &bfd= pr.second;
+            for(auto &kv : bfd.data){
+                int w= kv.first;
+                for(auto &xy : kv.second){
+                    oldCSV<< s <<","
+                          << b <<","
+                          << bfd.bestW <<","
+                          << bfd.amplitude <<","
+                          << bfd.amplitudeErr <<","
+                          << bfd.kParam <<","
+                          << bfd.kParamErr <<","
+                          << w <<","
+                          << xy.x <<","
+                          << xy.y <<","
+                          << xy.e <<"\n";
                 }
             }
         }
-
-        // Fill NEW CSV
-        for(const auto &pr : newFitMap){
+        // fill NEW
+        for(auto &pr : newFitMap){
             int s= pr.first.first;
             int b= pr.first.second;
-            const BoardFitData &bfd = pr.second;
-            if(bfd.data.empty()) continue;  // skip empty fits
-            for(const auto &kv : bfd.data){
-                int w = kv.first;
-                const auto &vecErrs = kv.second;
-                for(const auto &xy : vecErrs){
-                    newCSV
-                      << s << ","
-                      << b << ","
-                      << bfd.bestW << ","
-                      << bfd.amplitude << ","
-                      << bfd.amplitudeErr << ","
-                      << bfd.kParam << ","
-                      << bfd.kParamErr << ","
-                      << w << ","
-                      << xy.x << ","
-                      << xy.y << ","
-                      << xy.e << "\n";
+            const BoardFitData &bfd= pr.second;
+            if(bfd.data.empty()) continue;
+            for(auto &kv : bfd.data){
+                int w= kv.first;
+                for(auto &xy : kv.second){
+                    newCSV<< s <<","
+                          << b <<","
+                          << bfd.bestW <<","
+                          << bfd.amplitude <<","
+                          << bfd.amplitudeErr <<","
+                          << bfd.kParam <<","
+                          << bfd.kParamErr <<","
+                          << w <<","
+                          << xy.x <<","
+                          << xy.y <<","
+                          << xy.e <<"\n";
                 }
             }
         }
-
         oldCSV.close();
         newCSV.close();
 
-        std::cout << "\033[1;92m[INFO] Successfully wrote CSV summaries:\033[0m\n"
-                  << "  " << oldCSVpath << "\n"
-                  << "  " << newCSVpath << "\n";
+        std::cout <<"\033[1;92m[INFO] Successfully wrote CSV summaries:\033[0m\n"
+                  <<"  "<< oldCSVpath <<"\n"
+                  <<"  "<< newCSVpath <<"\n";
     }
 }
-
 
 
 void produceCompare32vsBest(
@@ -2037,149 +1996,148 @@ std::pair<double,double> produceKAndAmplitudePlots(
     }
 
     //----------------------------------------------------------------------
-    // 2)  k-value histograms (OLD vs NEW) => PNG #1
+     // 2)  k-value histograms (OLD vs NEW)  ⇒  kValue_distributions.png
     //----------------------------------------------------------------------
+
+    // we’ll store the NEW fit results here and return them at the end
+    double muK_new    = 0.;   // declare locally → no more “undeclared identifier”
+    double sigmaK_new = 0.;
+
+    // ------------------------------------------------------------------
+    // helper #1  – adaptive (coarsen-until-stable) rebin
+    // ------------------------------------------------------------------
+    auto adaptiveRebin = [](TH1F &h , int minPerBin = 4 , int minBins = 20)
+    {
+        int nBins = h.GetNbinsX();
+        while (nBins > minBins)
+        {
+            bool ok = true;
+            for (int i = 1; i <= nBins; ++i)
+                if (h.GetBinContent(i) > 0 && h.GetBinContent(i) < minPerBin)
+                { ok = false; break; }
+
+            if (ok) break;
+            h.Rebin(2);
+            nBins = h.GetNbinsX();
+        }
+    };
+
+    // ------------------------------------------------------------------
+    // helper #2  – iterative σ-clipped Gaussian fit
+    // ------------------------------------------------------------------
+    auto fitGaus = [](TH1   &h,
+                      double fullMin ,
+                      double fullMax ,
+                      int    maxIter = 4 ,
+                      double nSigma  = 2.5) -> TFitResultPtr
+    {
+        static int gid = 0;                          // unique names
+        TF1 fG(Form("fG_%d",++gid),"gaus",fullMin,fullMax);
+        fG.SetParameters(h.GetMaximum(), h.GetMean(), h.GetRMS());
+
+        TFitResultPtr res = h.Fit(&fG,"Q S 0 R");
+
+        for (int it = 0; it < maxIter; ++it)
+        {
+            double mu = fG.GetParameter(1);
+            double si = std::fabs(fG.GetParameter(2));
+            double lo = std::max(fullMin, mu - nSigma*si);
+            double hi = std::min(fullMax, mu + nSigma*si);
+            fG.SetRange(lo,hi);
+            res = h.Fit(&fG,"Q S 0 R");
+        }
+        fG.Draw("SAME");
+        return res;
+    };
+
+    // ------------------------------------------------------------------
+    // build histograms
+    // ------------------------------------------------------------------
     double kMax = 0.;
-    for (auto &kp : kPairs) {
+    for (auto &kp : kPairs)
         kMax = std::max(kMax, std::max(kp.kOld, kp.kNew));
-    }
-    kMax = (kMax < 1e-7) ? 1e-5 : 1.2 * kMax;
+    kMax = (kMax < 1e-7 ? 1e-5 : 1.25*kMax);
 
-    // Build histograms for k
-    TH1F hKold("hKold","Old k; k; # IBs", 50,0.,kMax);
-    TH1F hKnew("hKnew","New k; k; # IBs", 50,0.,kMax);
-    hKold.SetLineColor(kBlue+2);
-    hKold.SetLineWidth(3);
-    hKnew.SetLineColor(kRed+1);
-    hKnew.SetLineWidth(3);
+    TH1F hKold("hKold","Old k; k; # IBs", 200, 0., kMax);
+    TH1F hKnew("hKnew","New k; k; # IBs", 200, 0., kMax);
+    hKold.SetLineColor(kBlue+2);  hKold.SetLineWidth(3);
+    hKnew.SetLineColor(kRed+1);   hKnew.SetLineWidth(3);
 
-    // Fill histograms
     for (auto &kp : kPairs) {
         if (kp.kOld>0) hKold.Fill(kp.kOld);
         if (kp.kNew>0) hKnew.Fill(kp.kNew);
     }
 
+    adaptiveRebin(hKold);
+    adaptiveRebin(hKnew);
+
+    // ------------------------------------------------------------------
+    // draw + fit
+    // ------------------------------------------------------------------
     TCanvas cK("cK","k distributions",1200,600);
     cK.Divide(2,1);
 
-    // --- LEFT side => "Old k" ---
+    /* ---------- OLD sample ---------- */
     cK.cd(1);
     hKold.Draw("HIST");
+    auto frOld = fitGaus(hKold, 0., kMax);
 
-    // Step 1: quick fit across entire range
-    TF1 fG_old_init("fG_old_init","gaus",0.,kMax);
-    fG_old_init.SetParameters(hKold.GetMaximum(), hKold.GetMean(), hKold.GetRMS());
-    TFitResultPtr frOld1 = hKold.Fit(&fG_old_init,"Q S R");
-    
-    // from that, define narrower range
-    double meanO1     = frOld1->Parameter(1);
-    double sigmaO1    = std::fabs(frOld1->Parameter(2));
-    double loOld      = std::max(0.0, meanO1 - 3.*sigmaO1);
-    double hiOld      = meanO1 + 3.*sigmaO1;
+    double mu_old      = frOld->Parameter(1);
+    double sig_old     = frOld->Parameter(2);
+    double emu_old     = frOld->ParError(1);
+    double esig_old    = frOld->ParError(2);
+    double chi2ndfOld  = (frOld->Ndf()>0 ? frOld->Chi2()/frOld->Ndf() : 0.);
+    double res_old     = (std::fabs(mu_old)>0 ? 100.*sig_old/std::fabs(mu_old) : 0.);
 
-    // Step 2: final fit in narrower range
-    TF1 fG_old("fG_old","gaus",loOld,hiOld);
-    fG_old.SetLineColor(kGreen+3);
-    fG_old.SetLineWidth(2);
-
-    // set initial guesses from previous step
-    fG_old.SetParameters(frOld1->Parameter(0), meanO1, sigmaO1);
-    TFitResultPtr frOld2 = hKold.Fit(&fG_old,"Q S R+");
-
-    // Retrieve final fit parameters + errors
-    double mu_old       = frOld2->Parameter(1);
-    double sigma_old    = frOld2->Parameter(2);
-    double emu_old      = frOld2->ParError(1);
-    double esigma_old   = frOld2->ParError(2);
-    double chi2_old     = frOld2->Chi2();
-    double ndf_old      = frOld2->Ndf();
-    double chi2NdfOld   = (ndf_old>0 ? chi2_old/ndf_old : 0.0);
-    double resolutionOld= (std::fabs(mu_old)>1e-15 ? 100.*sigma_old/std::fabs(mu_old) : 0.);
-
-    fG_old.Draw("SAME");
-
-    // Print fit info with TLatex
     {
-        TLatex lat;
-        lat.SetNDC(true);
-        lat.SetTextSize(0.04);
-
-        double y=0.85;
-        lat.DrawLatex(0.55,y, Form("#mu = %.4g #pm %.4g", mu_old, emu_old));
-        y -=0.06;
-        lat.DrawLatex(0.55,y, Form("#sigma = %.4g #pm %.4g", sigma_old, esigma_old));
-        y -=0.06;
-        lat.DrawLatex(0.55,y, Form("#chi^{2}/NDF = %.2f", chi2NdfOld));
-        y -=0.06;
-        lat.DrawLatex(0.55,y, Form("Res=%.1f%%", resolutionOld));
-        y -=0.06;
-        lat.DrawLatex(0.55,y, Form("Entries=%.0f", hKold.GetEntries()));
+        TLatex t; t.SetNDC(); t.SetTextSize(0.035);
+        double y = 0.75;
+        t.DrawLatex(0.55,y,Form("#mu = %.4g #pm %.4g",mu_old,emu_old)); y-=0.06;
+        t.DrawLatex(0.55,y,Form("#sigma = %.4g #pm %.4g",sig_old,esig_old)); y-=0.06;
+        t.DrawLatex(0.55,y,Form("#chi^{2}/NDF = %.2f",chi2ndfOld)); y-=0.06;
+        t.DrawLatex(0.55,y,Form("Res = %.1f%%",res_old)); y-=0.06;
+        t.DrawLatex(0.55,y,Form("Entries = %.0f",hKold.GetEntries()));
     }
 
-    // --- RIGHT side => "New k" ---
+    /* ---------- NEW sample ---------- */
     cK.cd(2);
     hKnew.Draw("HIST");
+    auto frNew = fitGaus(hKnew, 0., kMax);
 
-    // Step 1: initial fit on entire range
-    TF1 fG_new_init("fG_new_init","gaus",0.,kMax);
-    fG_new_init.SetParameters(hKnew.GetMaximum(), hKnew.GetMean(), hKnew.GetRMS());
-    TFitResultPtr frNew1 = hKnew.Fit(&fG_new_init,"Q S R");
+    double mu_new      = frNew->Parameter(1);
+    double sig_new     = frNew->Parameter(2);
+    double emu_new     = frNew->ParError(1);
+    double esig_new    = frNew->ParError(2);
+    double chi2ndfNew  = (frNew->Ndf()>0 ? frNew->Chi2()/frNew->Ndf() : 0.);
+    double res_new     = (std::fabs(mu_new)>0 ? 100.*sig_new/std::fabs(mu_new) : 0.);
 
-    double meanN1     = frNew1->Parameter(1);
-    double sigmaN1    = std::fabs(frNew1->Parameter(2));
-    double loNew      = std::max(0.0, meanN1 - 3.*sigmaN1);
-    double hiNew      = meanN1 + 3.*sigmaN1;
-
-    // Step 2: final narrower fit
-    TF1 fG_new("fG_new","gaus",loNew,hiNew);
-    fG_new.SetLineColor(kGreen+3);
-    fG_new.SetLineWidth(2);
-    fG_new.SetParameters(frNew1->Parameter(0), meanN1, sigmaN1);
-
-    TFitResultPtr frNew2 = hKnew.Fit(&fG_new,"Q S R+");
-
-    double mu_new       = frNew2->Parameter(1);
-    double sigma_new    = frNew2->Parameter(2);
-    double emu_new      = frNew2->ParError(1);
-    double esigma_new   = frNew2->ParError(2);
-    double chi2_new     = frNew2->Chi2();
-    double ndf_new      = frNew2->Ndf();
-    double chi2NdfNew   = (ndf_new>0 ? chi2_new/ndf_new : 0.);
-    double resolutionNew= (std::fabs(mu_new)>1e-15 ? 100.*sigma_new/std::fabs(mu_new) : 0.);
-
-    fG_new.Draw("SAME");
-
-    // Print fit info with TLatex
     {
-        TLatex lat;
-        lat.SetNDC(true);
-        lat.SetTextSize(0.04);
-
-        double y=0.85;
-        lat.DrawLatex(0.55,y, Form("#mu = %.4g #pm %.4g", mu_new, emu_new));
-        y -=0.06;
-        lat.DrawLatex(0.55,y, Form("#sigma = %.4g #pm %.4g", sigma_new, esigma_new));
-        y -=0.06;
-        lat.DrawLatex(0.55,y, Form("#chi^{2}/NDF = %.2f", chi2NdfNew));
-        y -=0.06;
-        lat.DrawLatex(0.55,y, Form("Res=%.1f%%", resolutionNew));
-        y -=0.06;
-        lat.DrawLatex(0.55,y, Form("Entries=%.0f", hKnew.GetEntries()));
+        TLatex t; t.SetNDC(); t.SetTextSize(0.035);
+        double y = 0.75;
+        t.DrawLatex(0.55,y,Form("#mu = %.4g #pm %.4g",mu_new,emu_new)); y-=0.06;
+        t.DrawLatex(0.55,y,Form("#sigma = %.4g #pm %.4g",sig_new,esig_new)); y-=0.06;
+        t.DrawLatex(0.55,y,Form("#chi^{2}/NDF = %.2f",chi2ndfNew)); y-=0.06;
+        t.DrawLatex(0.55,y,Form("Res = %.1f%%",res_new)); y-=0.06;
+        t.DrawLatex(0.55,y,Form("Entries = %.0f",hKnew.GetEntries()));
     }
 
-    // We'll return these final new k-values
-    double muK_new    = mu_new;
-    double sigmaK_new = sigma_new;
+    // keep the results for the caller
+    muK_new    = mu_new;
+    sigmaK_new = sig_new;
 
     cK.SaveAs( (outDir + "/kValue_distributions.png").c_str() );
     std::cout << "[INFO] → wrote kValue_distributions.png\n";
 
-    //----------------------------------------------------------------------
+
+    //-----------------------------------------------------------------------
     // 3)  amplitude histograms (Gaussian) => PNG #2
-    //----------------------------------------------------------------------
-    // Use separate X ranges for old vs new to avoid wasted space.
+    //-----------------------------------------------------------------------
+
+    // Use separate X ranges for old vs new so we don’t waste space.
     double aMaxOld = 0.;
     double aMaxNew = 0.;
+
+    // Step 0: find largest old/new amplitude
     for (auto &a : aPairs) {
         if (a.ampOld>0 && a.ampOld>aMaxOld) aMaxOld = a.ampOld;
         if (a.ampNew>0 && a.ampNew>aMaxNew) aMaxNew = a.ampNew;
@@ -2187,6 +2145,7 @@ std::pair<double,double> produceKAndAmplitudePlots(
     if (aMaxOld<1e-7) aMaxOld= 1e-5; else aMaxOld *= 1.2;
     if (aMaxNew<1e-7) aMaxNew= 1e-5; else aMaxNew *= 1.2;
 
+    // Build two histograms
     TH1F hAold("hAold","Old amplitude;Amplitude;# IBs",50, 0., aMaxOld);
     TH1F hAnew("hAnew","New amplitude;Amplitude;# IBs",50, 0., aMaxNew);
 
@@ -2201,6 +2160,17 @@ std::pair<double,double> produceKAndAmplitudePlots(
         if (a.ampNew>0) hAnew.Fill(a.ampNew);
     }
 
+    // Next, gather boards whose NEW amplitude is >4400 or <1400
+    // so we can print them on the new amplitude pad.
+    std::vector< std::tuple<int,int,double> > outOfRangeNew;
+    for (auto &av : aPairs) {
+        if (av.ampNew>0) {
+            if (av.ampNew>4400. || av.ampNew<1400.) {
+                outOfRangeNew.push_back({av.sector, av.ib, av.ampNew});
+            }
+        }
+    }
+
     TCanvas cA("cA","Amplitude distributions",1200,600);
     cA.Divide(2,1);
 
@@ -2208,6 +2178,7 @@ std::pair<double,double> produceKAndAmplitudePlots(
     cA.cd(1);
     hAold.Draw("HIST");
 
+    // quick initial fit across 0..aMaxOld
     TF1 fG_aold_init("fG_aold_init","gaus", 0., aMaxOld);
     fG_aold_init.SetParameters(hAold.GetMaximum(), hAold.GetMean(), hAold.GetRMS());
     TFitResultPtr frOldAmp1 = hAold.Fit(&fG_aold_init,"Q S R");
@@ -2232,21 +2203,23 @@ std::pair<double,double> produceKAndAmplitudePlots(
     double chi2OldAmp   = frOldAmp2->Chi2();
     double ndfOldAmp    = frOldAmp2->Ndf();
     double chi2NdfOldAmp= (ndfOldAmp>0 ? chi2OldAmp/ndfOldAmp : 0.);
-    double resOldAmp    = (std::fabs(muOldAmp)>1e-12 ? 100.*sigmaOldAmp/std::fabs(muOldAmp) : 0.);
+    double resOldAmp    = (std::fabs(muOldAmp)>1e-12
+                           ? 100.*sigmaOldAmp/std::fabs(muOldAmp)
+                           : 0.);
 
     fG_aold.Draw("SAME");
 
-    // TLatex annotation
+    // TLatex annotation for OLD
     {
         TLatex lat;
         lat.SetNDC(true);
-        lat.SetTextSize(0.04);
-        double y=0.85;
+        lat.SetTextSize(0.035);
+        double y=0.75;
 
-        lat.DrawLatex(0.55,y, Form("#mu = %.1f #pm %.1f", muOldAmp, emuOldAmp)); y-=0.06;
-        lat.DrawLatex(0.55,y, Form("#sigma = %.1f #pm %.1f", sigmaOldAmp, esigOldAmp)); y-=0.06;
-        lat.DrawLatex(0.55,y, Form("#chi^{2}/NDF = %.2f", chi2NdfOldAmp));         y-=0.06;
-        lat.DrawLatex(0.55,y, Form("Res=%.1f%%", resOldAmp));                     y-=0.06;
+        lat.DrawLatex(0.55,y, Form("#mu = %.1f #pm %.1f", muOldAmp, emuOldAmp));  y-=0.058;
+        lat.DrawLatex(0.55,y, Form("#sigma = %.1f #pm %.1f",sigmaOldAmp, esigOldAmp)); y-=0.058;
+        lat.DrawLatex(0.55,y, Form("#chi^{2}/NDF = %.2f", chi2NdfOldAmp));       y-=0.058;
+        lat.DrawLatex(0.55,y, Form("Res=%.1f%%", resOldAmp));                    y-=0.058;
         lat.DrawLatex(0.55,y, Form("Entries=%.0f", hAold.GetEntries()));
     }
 
@@ -2254,14 +2227,15 @@ std::pair<double,double> produceKAndAmplitudePlots(
     cA.cd(2);
     hAnew.Draw("HIST");
 
+    // quick initial fit across 0..aMaxNew
     TF1 fG_anew_init("fG_anew_init","gaus",0., aMaxNew);
     fG_anew_init.SetParameters(hAnew.GetMaximum(), hAnew.GetMean(), hAnew.GetRMS());
     TFitResultPtr frNewAmp1 = hAnew.Fit(&fG_anew_init,"Q S R");
 
-    double muN1Amp     = frNewAmp1->Parameter(1);
-    double sigmaN1Amp  = std::fabs(frNewAmp1->Parameter(2));
-    double loNewAmp    = std::max(0.0, muN1Amp - 3.*sigmaN1Amp);
-    double hiNewAmp    = std::min(aMaxNew, muN1Amp + 3.*sigmaN1Amp);
+    double muN1Amp    = frNewAmp1->Parameter(1);
+    double sigmaN1Amp = std::fabs(frNewAmp1->Parameter(2));
+    double loNewAmp   = std::max(0.0, muN1Amp - 3.*sigmaN1Amp);
+    double hiNewAmp   = std::min(aMaxNew, muN1Amp + 3.*sigmaN1Amp);
 
     TF1 fG_anew("fG_anew","gaus",loNewAmp,hiNewAmp);
     fG_anew.SetLineColor(kGreen+3);
@@ -2275,72 +2249,120 @@ std::pair<double,double> produceKAndAmplitudePlots(
     double emuNewAmp   = frNewAmp2->ParError(1);
     double esigNewAmp  = frNewAmp2->ParError(2);
 
-    double chi2NewAmp   = frNewAmp2->Chi2();
-    double ndfNewAmp    = frNewAmp2->Ndf();
-    double chi2NdfNewAmp= (ndfNewAmp>0 ? chi2NewAmp/ndfNewAmp : 0.);
-    double resNewAmp    = (std::fabs(muNewAmp)>1e-12 ? 100.*sigmaNewAmp/std::fabs(muNewAmp) : 0.);
+    double chi2NewAmp    = frNewAmp2->Chi2();
+    double ndfNewAmp     = frNewAmp2->Ndf();
+    double chi2NdfNewAmp = (ndfNewAmp>0 ? chi2NewAmp/ndfNewAmp : 0.);
+    double resNewAmp     = (std::fabs(muNewAmp)>1e-12
+                            ? 100.*sigmaNewAmp/std::fabs(muNewAmp)
+                            : 0.);
 
     fG_anew.Draw("SAME");
 
-    // TLatex annotation
+    // TLatex annotation for NEW
     {
         TLatex lat;
         lat.SetNDC(true);
-        lat.SetTextSize(0.04);
-        double y=0.85;
+        lat.SetTextSize(0.035);
+        double y=0.75;
 
-        lat.DrawLatex(0.55,y, Form("#mu = %.1f #pm %.1f", muNewAmp, emuNewAmp)); y-=0.06;
-        lat.DrawLatex(0.55,y, Form("#sigma = %.1f #pm %.1f", sigmaNewAmp, esigNewAmp)); y-=0.06;
-        lat.DrawLatex(0.55,y, Form("#chi^{2}/NDF = %.2f", chi2NdfNewAmp));            y-=0.06;
-        lat.DrawLatex(0.55,y, Form("Res=%.1f%%", resNewAmp));                         y-=0.06;
+        lat.DrawLatex(0.55,y, Form("#mu = %.1f #pm %.1f", muNewAmp, emuNewAmp));     y-=0.058;
+        lat.DrawLatex(0.55,y, Form("#sigma = %.1f #pm %.1f",sigmaNewAmp, esigNewAmp)); y-=0.058;
+        lat.DrawLatex(0.55,y, Form("#chi^{2}/NDF = %.2f", chi2NdfNewAmp));           y-=0.058;
+        lat.DrawLatex(0.55,y, Form("Res=%.1f%%", resNewAmp));                        y-=0.058;
         lat.DrawLatex(0.55,y, Form("Entries=%.0f", hAnew.GetEntries()));
+
+        //
+        // Now, in smaller font, we print IB boards with ampNew>4400 or ampNew<1400
+        //
+        if(!outOfRangeNew.empty()) {
+            lat.SetTextSize(0.022);  // smaller
+            double xPos=0.62;       // bottom right corner
+            double yPos=0.47;
+
+            lat.DrawLatex(xPos - .03,yPos,"#bf{(S,IB,Amp) for Amp>4400 or <1400:}");
+            yPos -=0.03;
+
+            // Print up to 12 lines, or however many we want
+            int nPrinted=0;
+            for(auto &bb : outOfRangeNew){
+                if(nPrinted>=12) break;
+
+                int sec   = std::get<0>(bb);
+                int ibNum = std::get<1>(bb);
+                double val= std::get<2>(bb);
+
+                lat.DrawLatex(xPos,yPos,
+                              Form("S=%d, IB=%d => %.0f", sec, ibNum, val));
+                yPos -= 0.03;
+                nPrinted++;
+            }
+        }
     }
 
-    // Save => amplitude_distributions_gaus.png
+    // Save final => amplitude_distributions_gaus.png
     cA.SaveAs( (outDir + "/amplitude_distributions_gaus.png").c_str() );
     std::cout << "[INFO] → wrote amplitude_distributions_gaus.png\n";
-
+    
     //----------------------------------------------------------------------
-    // 4)  k-ratio NEW/OLD => NO FIT, show points => PNG #3
+    // 4)  k-ratio NEW/OLD => no fit, ratio on y-axis vs board index on x
     //----------------------------------------------------------------------
-    std::vector<double> kRatio;
-    double kRmax = 0.;
-
-    // We'll track which boards exceed ratio=10 for printing
     std::vector< std::pair<std::pair<int,int>, double> > outliers;
+    std::vector<double> yVals;               // ratio <= 10
+    std::vector<int>    xIndices;            // 1..N board indices
+
+    // We'll gather the boards in ascending order of e.g. (sector,ib),
+    // or just in the order they appear. We'll store them in xIndices
+    // so we can place them on the x-axis in TGraph.
+    int idx=0;
 
     for (auto &kp : kPairs)
     {
         if (kp.kOld>0 && kp.kNew>0) {
             double r = kp.kNew / kp.kOld;
             if(r>10.0) {
+                // store as outlier, skip from graph
                 outliers.push_back({{kp.sector, kp.ib}, r});
             }
             else {
-                kRatio.push_back(r);
+                // keep for graph
+                idx++;
+                xIndices.push_back(idx);
+                yVals.push_back(r);
             }
-            if (r>kRmax) kRmax = r;
         }
     }
 
-    if (!kRatio.empty())
+    // If we have no valid ratio <=10 => skip
+    if (!yVals.empty())
     {
-        // fix range => 0..10
-        TH1F hKR("hKR","k ratio (new/old);Ratio;# IBs",50, 0., 10.);
-        for (double r : kRatio) {
-            hKR.Fill(r);
+        // We'll build a TGraph from xIndices,yVals
+        TGraph grK((int)yVals.size());
+        for(int i=0; i<(int)yVals.size(); i++){
+            // x = xIndices[i], y = ratio
+            grK.SetPoint(i, (double)xIndices[i], yVals[i]);
         }
 
-        TCanvas cKR("cKR","k ratio",900,600);
+        // We'll define the canvas
+        TCanvas cKR("cKR","k ratio vs. board index",900,600);
 
-        hKR.SetMarkerStyle(20);
-        hKR.SetMarkerColor(kBlue+2);
-        hKR.SetLineColor(kBlue+2);
-        hKR.SetLineWidth(2);
+        // We'll set style so points are visible
+        grK.SetMarkerStyle(20);
+        grK.SetMarkerColor(kBlue+2);
+        grK.SetLineColor(kBlue+2);
+        grK.SetLineWidth(2);
 
-        hKR.Draw("PE");
+        // We want the y-range = 0..10
+        grK.SetMinimum(0.);
+        grK.SetMaximum(4.);
 
-        // Mark outliers
+        // Label axes
+        grK.GetXaxis()->SetTitle("Board index");
+        grK.GetYaxis()->SetTitle("k ratio (new/old)");
+
+        // draw
+        grK.Draw("AP");  // A for axis, P for points
+
+        // If outliers exist => show them with TLatex
         if(!outliers.empty()) {
             TLatex lat;
             lat.SetNDC(true);
@@ -2368,45 +2390,92 @@ std::pair<double,double> produceKAndAmplitudePlots(
         std::cout << "[INFO] → wrote kRatio_bestW_gaus.png\n";
     }
     else {
-        std::cout << "[WARN] → kRatio histogram skipped (no valid data).\n";
+        std::cout << "[WARN] → kRatio plot skipped (no valid data <=10).\n";
     }
+    
+    //-----------------------------------------------------------------------
+    // 5) amplitude-ratio NEW/OLD => ratio on y-axis vs board index on x
+    //-----------------------------------------------------------------------
+    std::vector< std::pair<std::pair<int,int>, double> > outliersAmp;
+    std::vector<double> yValsA;
+    std::vector<int>    xIndicesA;
 
-    //----------------------------------------------------------------------
-    // 5)  amplitude-ratio NEW/OLD => NO FIT, show points => PNG #4
-    //----------------------------------------------------------------------
-    std::vector<double> aRatio;
-    double aRmax = 0.;
+    int idxA = 0;
     for (auto &av : aPairs)
     {
-        if (av.ampOld>0 && av.ampNew>0) {
-            double r = av.ampNew/av.ampOld;
-            aRatio.push_back(r);
-            if (r>aRmax) aRmax=r;
+        if (av.ampOld > 0. && av.ampNew > 0.)
+        {
+            double r = av.ampNew / av.ampOld;
+            // If you want to skip extremely large ratios, you can do e.g.:
+            if (r > 10.0) {
+                // store as outlier, skip from plot
+                outliersAmp.push_back({{av.sector, av.ib}, r});
+            }
+            else {
+                // keep for TGraph
+                ++idxA;
+                xIndicesA.push_back(idxA);
+                yValsA.push_back(r);
+            }
         }
     }
 
-    if (!aRatio.empty())
+    if (!yValsA.empty())
     {
-        aRmax *= 1.2;
-        TH1F hAR("hAR","Amplitude ratio (new/old);Ratio;# IBs",50,0.,aRmax);
-        for (double r : aRatio) {
-            hAR.Fill(r);
+        // Build TGraph => x= xIndicesA, y= amplitude ratio
+        TGraph grA((int)yValsA.size());
+        for(int i=0; i<(int)yValsA.size(); i++){
+            grA.SetPoint(i, (double)xIndicesA[i], yValsA[i]);
         }
 
-        TCanvas cAR("cAR","Amplitude ratio",900,600);
+        // Canvas
+        TCanvas cAR("cAR","Amplitude ratio vs. board index",900,600);
 
-        hAR.SetMarkerStyle(20);
-        hAR.SetMarkerColor(kBlue+2);
-        hAR.SetLineColor(kBlue+2);
-        hAR.SetLineWidth(2);
+        grA.SetMarkerStyle(20);
+        grA.SetMarkerColor(kBlue+2);
+        grA.SetLineColor(kBlue+2);
+        grA.SetLineWidth(2);
 
-        hAR.Draw("PE");
+        // define y-range you prefer
+        grA.SetMinimum(0.0);
+        grA.SetMaximum(7.0); // or something else as needed
+
+        // axes labels
+        grA.GetXaxis()->SetTitle("Board index");
+        grA.GetYaxis()->SetTitle("Amplitude ratio (new/old)");
+
+        // draw the graph
+        grA.Draw("AP");
+
+        // If we have any “out of range” boards => show them with TLatex
+        if(!outliersAmp.empty()) {
+            TLatex lat;
+            lat.SetNDC(true);
+            lat.SetTextSize(0.028);
+
+            double yPos = 0.88;
+            lat.DrawLatex(0.15, yPos, "#bf{Boards with amplitude ratio>10:}");
+            yPos -= 0.04;
+
+            int countPrinted = 0;
+            for(const auto &ol : outliersAmp) {
+                if(countPrinted >= 6) break; // show up to 6 lines
+                lat.DrawLatex(
+                    0.15, yPos,
+                    Form("S=%d IB=%d => ratio=%.2f",
+                         ol.first.first,
+                         ol.first.second,
+                         ol.second));
+                yPos -= 0.05;
+                countPrinted++;
+            }
+        }
 
         cAR.SaveAs( (outDir + "/amplitudeRatio_bestW_gaus.png").c_str() );
         std::cout << "[INFO] → wrote amplitudeRatio_bestW_gaus.png\n";
     }
     else {
-        std::cout << "[WARN] → amplitudeRatio histogram skipped (no valid data).\n";
+        std::cout << "[WARN] → amplitudeRatio plot skipped (no valid data).\n";
     }
 
     //----------------------------------------------------------------------
@@ -2566,36 +2635,39 @@ void outOfSigmaAmplitudeCheck(
         }
 
         // Print the fitted result
-        lat.DrawLatex(0.57,0.80,Form("#LTk#GT=%.3g, #sigma(k)=%.3g",
+        lat.DrawLatex(0.57,0.75,Form("#LTk#GT=%.3g, #sigma(k)=%.3g",
                                      meanK_new, sigmaK_new));
-        lat.DrawLatex(0.57,0.74,Form("Fit #mu_{A}=%.1f, #sigma_{A}=%.1f", mu_in,sigma_in));
+        lat.DrawLatex(0.57,0.72,Form("Fit #mu_{A}=%.1f, #sigma_{A}=%.1f", mu_in,sigma_in));
     }
     else {
-        lat.DrawLatex(0.57,0.80,"(Not enough stats to fit in-sigma hist)");
+        lat.DrawLatex(0.57,0.69,"(Not enough stats to fit in-sigma hist)");
     }
 
-    lat.DrawLatex(0.57,0.66,Form("N_{IB} = %zu", amps_inSigma.size()));
-    lat.DrawLatex(0.57,0.58,Form("#LT A #GT = %.1f", meanIn));
-    lat.DrawLatex(0.57,0.52,Form("median(A)= %.1f", medianIn));
+    lat.DrawLatex(0.57,0.65,Form("N_{IB} = %zu", amps_inSigma.size()));
+    lat.DrawLatex(0.57,0.61,Form("#LT A #GT = %.1f", meanIn));
+    lat.DrawLatex(0.57,0.57,Form("median(A)= %.1f", medianIn));
 
     // We'll print the outlier boards near the left side (just a few).
     {
-        double yText = 0.40;
-        int countShow=0;
+        // Shift text into bottom-right region of the pad:
+        double xText = 0.65;  // further to the right
+        double yText = 0.55;  // lower down for bottom corner
+        int countShow = 0;
+        
         if(!outliersIn.empty()){
-            lat.DrawLatex(0.15,yText,"#bf{±3#sigma Boards:}");
+            lat.DrawLatex(xText, yText, "#bf{#pm3#sigma Boards:}");
             yText -= 0.05;
         }
         for (auto &bo : outliersIn) {
-            if(countShow>=5) break;
-            lat.DrawLatex(0.15,yText,
+            if(countShow >= 5) break;  // limit to 5 lines
+            lat.DrawLatex(xText, yText,
                           Form("S=%d IB=%d A=%.1f k=%.3g",
-                               bo.sb.first, bo.sb.second, bo.amp, bo.k));
+                               bo.sb.first, bo.sb.second,
+                               bo.amp, bo.k));
             yText -= 0.05;
             countShow++;
         }
     }
-
     //------------------------- out-σ panel ---------------------------------
     cChk.cd(2);
     hA_out.SetLineColor(kRed);
@@ -2633,7 +2705,7 @@ void outOfSigmaAmplitudeCheck(
         double yText = 0.40;
         int countShow=0;
         if(!outliersOut.empty()){
-            lat.DrawLatex(0.15,yText,"#bf{±3#sigma Boards:}");
+            lat.DrawLatex(0.15,yText,"#bf{#pm 3#sigma Boards:}");
             yText -= 0.05;
         }
         for (auto &bo : outliersOut) {
@@ -2653,7 +2725,6 @@ void outOfSigmaAmplitudeCheck(
     // 5)  (unchanged)  Best-pulse-width usage table 24–40 ns
     //----------------------------------------------------------------------
     {
-        // We'll keep this exactly as in your original code
         std::map<int,int> cntOld, cntNew;
         for (int w=24; w<=40; ++w) { cntOld[w]=0; cntNew[w]=0; }
 
@@ -2942,37 +3013,46 @@ void produceMultiWOverlayPlots(
             }
         }
 
-        // 4) middle-right => build a legend with a simpler format:
+        // 4) middle-right => build a more readable legend:
         cCmp.cd(4);
         {
-            // One approach: we create a "dummy" set of markers for each width
-            // to show color, plus separate dummy markers for old/new shape.
-            TLegend* leg = new TLegend(0.05,0.05,0.95,0.95);
+            // Create a legend occupying most of the pad, so we have plenty of room
+            TLegend* leg = new TLegend(0.05, 0.05, 0.95, 0.95);
             leg->SetNColumns(2);
             leg->SetBorderSize(1);
-            leg->SetFillColorAlpha(kWhite,0.8);
-            leg->SetTextSize(0.03);
+            leg->SetFillColorAlpha(kWhite, 0.8);
 
-            // for each w in wSet, add a single entry for color
+            // Make the text a bit larger
+            leg->SetTextSize(0.035);
+
+            // Add a bigger dummy marker for each pulse width
             for (int w : wSet) {
-                TMarker* mDummy = new TMarker(0,0,20); // shape doesn't matter
+                TMarker* mDummy = new TMarker(0,0,20);
+                mDummy->SetMarkerSize(2.0);  // bigger than default
                 mDummy->SetMarkerColor(colorForWidth(w));
                 mDummy->SetMarkerStyle(20);
-                leg->AddEntry(mDummy, Form("W=%d", w), "p");
+                leg->AddEntry(mDummy, Form("Pulse Width=%d", w), "p");
             }
 
-            // Then add separate markers to show "Old => circle(20), New => square(21), Ratio=>triangle(25)"
+            // Also add separate markers for OLD/NEW/RATIO
             TMarker *mOld = new TMarker(0,0,20);
             TMarker *mNew = new TMarker(0,0,21);
             TMarker *mRat = new TMarker(0,0,25);
 
+            // Make these markers larger too
+            mOld->SetMarkerSize(2.0);
+            mNew->SetMarkerSize(2.0);
+            mRat->SetMarkerSize(2.0);
+
+            // All in black to distinguish from the color-coded widths
             mOld->SetMarkerColor(kBlack);
             mNew->SetMarkerColor(kBlack);
             mRat->SetMarkerColor(kBlack);
 
-            leg->AddEntry(mOld, "OLD data",   "p");
-            leg->AddEntry(mNew, "NEW data",   "p");
-            leg->AddEntry(mRat, "RATIO data", "p");
+            // Legend labels
+            leg->AddEntry(mOld, "OLD data",    "p");
+            leg->AddEntry(mNew, "NEW data",    "p");
+            leg->AddEntry(mRat, "RATIO data",  "p");
 
             leg->Draw();
         }
@@ -3140,328 +3220,344 @@ void produceMultiWOverlayPlots(
 }
 
 
-/*****************************************************************************
- *  Low-level helper : draws every (sector,ib) overlay for ONE data-set
- *  - The color of each curve depends on the test-pulse width `w`
- *  - We only draw the exponential fit (in red) for the bestW, using the
- *    amplitude/kParam from the stored BoardFitData.
- *  - We also produce a multi-page "tabulated best-fits" (6×5) summary, with
- *    each board's bestW curve + exponential fit in a sub-pad.
- *****************************************************************************/
-
 static void produceOneSetOfOverlays(
-    const std::map< std::pair<int,int>, BoardFitData > &fitMap,
-    const std::string &tag,                       // "OLD" / "NEW"
-    const std::string &outDirBase,                // e.g. …/overlays/old or …/overlays/new
-    const std::map<int,Color_t> &widthColour      // fixed colour table for widths
+   const std::map< std::pair<int,int>, BoardFitData > &fitMap,
+   const std::string &tag,                       // "OLD" / "NEW"
+   const std::string &outDirBase,                // e.g. .../overlays/old
+   const std::map<int,Color_t> &widthColour      // fixed colour table
 )
 {
-    /*--------------------------------------------------------------------*/
-    /* 1) ensure the output directory exists                              */
-    /*--------------------------------------------------------------------*/
-    gSystem->Exec(Form("mkdir -p %s", outDirBase.c_str()));
+   // 1) ensure output directory
+   gSystem->Exec(Form("mkdir -p %s", outDirBase.c_str()));
+   std::cout << "[DEBUG] produceOneSetOfOverlays => tag="<<tag
+             <<", outDirBase="<<outDirBase<<std::endl
+             << "       => fitMap.size()=" << fitMap.size() << std::endl;
 
-    /*--------------------------------------------------------------------*/
-    /* 2) track boards with amplitude>6000, for final summary             */
-    /*--------------------------------------------------------------------*/
-    struct HighAmpInfo {
-        int s;
-        int ib;
-        double A;
-        double eA;
-    };
-    std::vector<HighAmpInfo> highAmpList;
+   // 2) track boards with amplitude>6000
+   struct HighAmpInfo { int s; int ib; double A; double eA; };
+   std::vector<HighAmpInfo> highAmpList;
 
-    /*--------------------------------------------------------------------*/
-    /* We'll also collect a struct with each board's "bestW" data so we   */
-    /* can produce the 6×5 tabulated best-fits at the end.                */
-    /*--------------------------------------------------------------------*/
-    struct BestFitBoard {
-        int s, ib;
-        int bestW;
-        double amplitude, amplitudeErr;
-        double kParam, kParamErr;
-        // We'll also store the data vector for bestW
-        std::vector<XYerr> bestWdata;
-    };
-    std::vector<BestFitBoard> tabulated; // we fill this as we go
+   // 3) data structure for “tabulated best-fits”
+   struct BestFitBoard {
+       int s, ib;
+       int bestW;
+       double amplitude, amplitudeErr;
+       double kParam, kParamErr;
+       std::vector<XYerr> bestWdata;
+   };
+   std::vector<BestFitBoard> tabulated;
 
-    /*--------------------------------------------------------------------*/
-    /* 3) loop over every (sector,ib) in fitMap => produce normal overlays*/
-    /*--------------------------------------------------------------------*/
-    for (const auto &pr : fitMap)
-    {
-        int s  = pr.first.first;
-        int ib = pr.first.second;
+   // 4) loop over boards
+   for (const auto &pr : fitMap)
+   {
+       int s  = pr.first.first;
+       int ib = pr.first.second;
+       const BoardFitData &bfd = pr.second;
 
-        // optional skip if "bad board"
-        if (isBadBoard(s,ib))
-            continue;
+       std::cout << "\n[DEBUG] Checking board => S="<<s<<", IB="<<ib
+                 <<", data.size()=" << bfd.data.size() << std::endl;
 
-        const BoardFitData &bfd = pr.second;
-        if (bfd.data.empty())
-            continue;  // no data => skip
+       // skip if “bad board”
+       if (isBadBoard(s,ib)) {
+           std::cerr << "[DEBUG]   => Skipping, isBadBoard(s,ib)=true\n";
+           continue;
+       }
+       // skip if no data
+       if (bfd.data.empty()) {
+           std::cerr << "[DEBUG]   => Skipping, bfd.data.empty()=true\n";
+           continue;
+       }
 
-        // The best test-pulse width from BoardFitData
-        int bestW = bfd.bestW;
-        if (bestW <= 0) {
-            // if bestW isn't valid, skip
-            continue;
-        }
+       // bestW
+       int bestW = bfd.bestW;
+       if(bestW<=0) {
+           std::cerr << "[DEBUG]   => Skipping, bestW="<<bestW<<" invalid.\n";
+           continue;
+       }
+       std::cout << "[DEBUG]   => bestW="<< bestW
+                 <<", amplitude="<<bfd.amplitude
+                 <<", k="<<bfd.kParam <<std::endl;
 
-        /*----------------------------------------------------------------*/
-        /* 4) Build a TCanvas + TMultiGraph for all widths on that IB     */
-        /*----------------------------------------------------------------*/
-        TCanvas c(Form("%sGain_S%d_IB%d", tag.c_str(), s, ib),
-                  Form("%sGain_S%d_IB%d", tag.c_str(), s, ib),
-                  1200,900);
-        c.SetRightMargin(0.28);
-        c.SetLeftMargin(0.15);
+       // Create TCanvas
+       TCanvas c(Form("%sGain_S%d_IB%d", tag.c_str(), s, ib),
+                 Form("%sGain_S%d_IB%d", tag.c_str(), s, ib),
+                 1200,900);
+       c.SetRightMargin(0.28);
+       c.SetLeftMargin(0.15);
 
-        TMultiGraph *mg = new TMultiGraph();
-        mg->SetTitle(Form("Gain curves (%s), Sector %d, IB %d;#Delta(mV);Avg ADC",
-                          tag.c_str(), s, ib));
+       TMultiGraph* mg = new TMultiGraph();
+       mg->SetTitle(
+           Form("Gain curves (%s), Sector %d, IB %d;#Delta(mV);Avg ADC",
+                tag.c_str(), s, ib)
+       );
 
-        // A legend on the right side
-        TLegend leg(0.72,0.10,0.98,0.90);
-        leg.SetNColumns(2);
-        leg.SetTextSize(0.03);
-        leg.SetBorderSize(1);
-        leg.SetFillColorAlpha(kWhite,0.7);
+       TLegend leg(0.72,0.10,0.98,0.90);
+       leg.SetNColumns(2);
+       leg.SetTextSize(0.03);
+       leg.SetBorderSize(1);
+       leg.SetFillColorAlpha(kWhite,0.7);
 
-        TGraphErrors *grBest = nullptr; // We'll store the TGraph for bestW
+       TGraphErrors* grBest = nullptr;
 
-        /*----------------------------------------------------------------*/
-        /* 5) For each width => build TGraphErrors => add to mg           */
-        /*----------------------------------------------------------------*/
-        for (auto &kv : bfd.data)
-        {
-            int w = kv.first;
-            const auto &xyVec = kv.second;
-            if (xyVec.empty())
-                continue;
+       // 5) build TGraphErrors for each width
+       for(const auto &kv : bfd.data)
+       {
+           int w = kv.first;
+           const auto &xyVec = kv.second;
 
-            // create TGraphErrors
-            TGraphErrors *gr = new TGraphErrors((int)xyVec.size());
-            for (int i=0; i<(int)xyVec.size(); i++){
-                gr->SetPoint(i, xyVec[i].x, xyVec[i].y);
-                gr->SetPointError(i, 0., xyVec[i].e);
-            }
+           std::cout<<"[DEBUG]     => width="<<w
+                    <<", #points="<<xyVec.size()<<std::endl;
+           if(xyVec.empty()) {
+               std::cerr<<"[DEBUG]     => Skipping empty vector\n";
+               continue;
+           }
 
-            // pick color from widthColour map if found; else fallback
-            auto itCol = widthColour.find(w);
-            Color_t col = (itCol != widthColour.end() ? itCol->second : kBlack);
+           TGraphErrors *gr = new TGraphErrors((int)xyVec.size());
+           for(int i=0; i<(int)xyVec.size(); i++){
+               gr->SetPoint(i, xyVec[i].x, xyVec[i].y);
+               gr->SetPointError(i, 0., xyVec[i].e);
+           }
 
-            // highlight bestW in black
-            if (w == bestW) {
-                gr->SetMarkerStyle(21);
-                gr->SetMarkerColor(kBlack);
-                gr->SetLineColor(kBlack);
-                grBest = gr;
-            }
-            else {
-                // normal widths => marker style=20, color=col
-                gr->SetMarkerStyle(20);
-                gr->SetMarkerColor(col);
-                gr->SetLineColor(col);
-            }
+           // find color
+           auto itC = widthColour.find(w);
+           Color_t cCol = (itC!=widthColour.end()? itC->second : kBlack);
 
-            gr->SetNameTitle(Form("w%d", w), Form("W=%d ns", w));
-            mg->Add(gr, "P");
-            leg.AddEntry(gr, Form("W=%d", w), "lp");
-        }
+           // if this is bestW => highlight
+           if(w==bestW) {
+               gr->SetMarkerStyle(21);
+               gr->SetMarkerColor(kBlack);
+               gr->SetLineColor(kBlack);
+               grBest = gr;
+               std::cout << "[DEBUG]     => Found bestW TGraph => w="<<w<<std::endl;
+           } else {
+               gr->SetMarkerStyle(20);
+               gr->SetMarkerColor(cCol);
+               gr->SetLineColor(cCol);
+           }
 
-        /*----------------------------------------------------------------*/
-        /* 6) draw the TMultiGraph, set y-range, etc.                     */
-        /*----------------------------------------------------------------*/
-        mg->Draw("A");
-        mg->GetXaxis()->SetLimits(-2000,2000);
-        mg->SetMinimum(0.);
-        gPad->SetGrid();
+           gr->SetNameTitle(Form("w%d",w), Form("W=%d ns", w));
+           mg->Add(gr,"P");
+           leg.AddEntry(gr, Form("W=%d", w), "lp");
+       }
 
-        // expand yMax by ~20%
-        double yMax = (mg->GetHistogram() ? mg->GetHistogram()->GetMaximum() : 0.);
-        mg->SetMaximum(1.2 * yMax);
+       // 6) draw TMultiGraph
+       mg->Draw("A");
+       mg->GetXaxis()->SetLimits(-2000,2000);
+       mg->SetMinimum(0.);
+       gPad->SetGrid();
 
-        leg.Draw();
+       double yMax = (mg->GetHistogram() ? mg->GetHistogram()->GetMaximum() : 0.);
+       mg->SetMaximum(1.2*yMax);
 
-        /*----------------------------------------------------------------*/
-        /* 7) If we have bestW => draw the exponential fit in red         */
-        /*----------------------------------------------------------------*/
-        if (grBest) {
-            // We'll use the amplitude & slope from bfd
-            // We'll define a TF1 with that form & draw it
-            TF1 fExp("fExp","[0]*exp([1]*x)",-1500,1500);
-            fExp.SetLineColor(kRed);
+       leg.Draw();
 
-            fExp.SetParameter(0, bfd.amplitude);
-            fExp.SetParameter(1, bfd.kParam);
+       // 7) bestW => draw red exponential
+       if(!grBest) {
+           std::cerr<<"[ERROR]   => Missing bestW TGraph for S="<<s<<",IB="<<ib
+                    <<" => expected w="<<bestW<<std::endl
+                    <<"             => CRASH.\n";
+           std::exit(1);
+       }
+       // define TF1 with the stored amplitude/k
+       TF1 fExp("fExp","[0]*exp([1]*x)", -2000,2000);
+       fExp.SetLineColor(kRed);
+       fExp.SetNpx(1000); // more sampling
 
-            double parErr[2] = { bfd.amplitudeErr, bfd.kParamErr };
-            fExp.SetParErrors(parErr);
+       double A = bfd.amplitude;
+       double eA= bfd.amplitudeErr;
+       double K = bfd.kParam;
+       double eK= bfd.kParamErr;
 
-            fExp.Draw("SAME");
+       // sanity check
+       if(A<=0 || K<=0) {
+           std::cerr<<"[ERROR]   => S="<<s<<",IB="<<ib
+                    <<": amplitude="<<A<<" or k="<<K
+                    <<" invalid => CRASH.\n";
+           std::exit(1);
+       }
 
-            // Add textual annotations near the top-left
-            TLatex lat;
-            lat.SetNDC(true);
-            lat.SetTextSize(0.028);
-            double y0 = 0.85;
+       fExp.SetParameter(0,A);
+       fExp.SetParameter(1,K);
+       double parErr[2] = { eA, eK };
+       fExp.SetParErrors(parErr);
 
-            lat.DrawLatex(0.16, y0, Form("BestW = %d ns", bestW));
-            y0 -= 0.05;
-            lat.DrawLatex(0.16, y0,
-                          Form("A = %.1f #pm %.1f", bfd.amplitude, bfd.amplitudeErr));
-            y0 -= 0.05;
-            lat.DrawLatex(0.16, y0,
-                          Form("k = %.3g #pm %.3g", bfd.kParam, bfd.kParamErr));
+       std::cout << "[DEBUG]   => About to draw red exponential: A="
+                 <<A<<" ± "<<eA<<", k="<<K<<" ± "<< eK << std::endl;
+       fExp.Draw("SAME");
+       std::cout << "[DEBUG]   => RED exponential drawn!\n";
 
-            // track high amplitude boards
-            if (bfd.amplitude > 6000.) {
-                HighAmpInfo hi { s, ib, bfd.amplitude, bfd.amplitudeErr };
-                highAmpList.push_back(hi);
-            }
-        }
+       // textual annotation
+       TLatex lat;
+       lat.SetNDC(true);
+       lat.SetTextSize(0.028);
 
-        /*----------------------------------------------------------------*/
-        /* 8) Save as .png                                                */
-        /*----------------------------------------------------------------*/
-        std::string outPath = Form("%s/S%d_IB%d.png", outDirBase.c_str(), s, ib);
-        c.SaveAs(outPath.c_str());
+       double yLoc=0.85;
+       lat.DrawLatex(0.16, yLoc, Form("BestW = %d ns", bestW));
+       yLoc -=0.05;
+       lat.DrawLatex(0.16, yLoc,
+                     Form("A = %.1f #pm %.1f", A, eA));
+       yLoc -=0.05;
+       lat.DrawLatex(0.16, yLoc,
+                     Form("k = %.3g #pm %.3g", K, eK));
 
-        // clean up
-        delete mg;
+       // track amplitude>6000
+       if(A>6000.) {
+           HighAmpInfo hi{ s, ib, A, eA };
+           highAmpList.push_back(hi);
+       }
 
-        /*----------------------------------------------------------------*/
-        /* 9) Also store info for the “tabulated best-fits” 6×5           */
-        /*----------------------------------------------------------------*/
-        auto itBW = bfd.data.find(bestW);
-        if (itBW != bfd.data.end()) {
-            BestFitBoard bfb;
-            bfb.s = s;
-            bfb.ib = ib;
-            bfb.bestW = bestW;
-            bfb.amplitude     = bfd.amplitude;
-            bfb.amplitudeErr  = bfd.amplitudeErr;
-            bfb.kParam        = bfd.kParam;
-            bfb.kParamErr     = bfd.kParamErr;
-            bfb.bestWdata     = itBW->second;  // the XYerr vector
+       // 8) save
+       std::string outPath= Form("%s/S%d_IB%d.png", outDirBase.c_str(), s, ib);
+       c.SaveAs(outPath.c_str());
+       std::cout << "[DEBUG]   => Saved overlaid plot: "<< outPath << std::endl;
 
-            tabulated.push_back(bfb);
-        }
-    } // end board loop
+       // 9) store info for tabulated best-fits
+       auto itBW = bfd.data.find(bestW);
+       if(itBW==bfd.data.end()) {
+           std::cerr<<"[ERROR]   => bestW="<<bestW
+                    <<" not found in bfd.data => CRASH.\n";
+           std::exit(1);
+       }
+       if(itBW->second.empty()){
+           std::cerr<<"[ERROR]   => bestW="<<bestW
+                    <<" => XY vector is empty => CRASH.\n";
+           std::exit(1);
+       }
 
-    /*--------------------------------------------------------------------*/
-    /* 10) final summary of boards with amplitude>6000                    */
-    /*--------------------------------------------------------------------*/
-    std::cout << "\n\033[1;33m==========  SUMMARY OF " << tag
-              << " FIT AMPLITUDES >6000  ==========\033[0m\n";
-    if (highAmpList.empty()) {
-        std::cout << "\033[1;32mNo boards had amplitude above 6000.\033[0m\n";
-    }
-    else {
-        std::cout << "\033[1;36mFound " << highAmpList.size()
-                  << " board(s) with amplitude>6000.\033[0m\n"
-                  << "   Sector | IB  |  Fitted A ± eA\n"
-                  << "   -------+-----+------------------\n";
-        for (auto &hi : highAmpList) {
-            std::cout << "   " << std::setw(6) << hi.s << " | "
-                      << std::setw(3) << hi.ib << " | "
-                      << Form("%9.1f ± %4.1f", hi.A, hi.eA)
-                      << "\n";
-        }
-    }
-    std::cout << "\033[1;33m==========================================================\033[0m\n"
-              << "[INFO] → per-IB overlays for " << tag
-              << " saved in " << outDirBase << '\n';
+       BestFitBoard bfb;
+       bfb.s           = s;
+       bfb.ib          = ib;
+       bfb.bestW       = bestW;
+       bfb.amplitude   = A;
+       bfb.amplitudeErr= eA;
+       bfb.kParam      = K;
+       bfb.kParamErr   = eK;
+       bfb.bestWdata   = itBW->second;
 
-    /*--------------------------------------------------------------------*/
-    /* 11) 6×5 tabulated best-fits for each IB                            */
-    /*--------------------------------------------------------------------*/
-    std::string tableFolder;
-    if (tag=="OLD")
-        tableFolder = "tabulatedBestFitsOld";
-    else
-        tableFolder = "tabulatedBestFitsNew";
+       tabulated.push_back(bfb);
 
-    std::string outFolder = Form("%s/%s", outDirBase.c_str(), tableFolder.c_str());
-    gSystem->Exec(Form("mkdir -p %s", outFolder.c_str()));
+       delete mg;
+   } // end board loop
 
-    const int boardsPerCanvas = 6*5;  // 30 subpads
-    int totalBoards = (int)tabulated.size();
-    int pageIndex=0;
+   // 10) summary amplitude>6000
+   std::cout << "\n\033[1;33m==========  SUMMARY OF " << tag
+             << " FIT AMPLITUDES >6000  ==========\033[0m\n";
+   if(highAmpList.empty()) {
+       std::cout << "\033[1;32mNo boards had amplitude above 6000.\033[0m\n";
+   } else {
+       std::cout << "\033[1;36mFound " << highAmpList.size()
+                 << " board(s) with amplitude>6000.\033[0m\n"
+                 << "   Sector | IB  |  Fitted A ± eA\n"
+                 << "   -------+-----+------------------\n";
+       for (auto &hi : highAmpList) {
+           std::cout << "   " << std::setw(6) << hi.s << " | "
+                     << std::setw(3) << hi.ib << " | "
+                     << Form("%9.1f ± %4.1f", hi.A, hi.eA) << "\n";
+       }
+   }
+   std::cout << "\033[1;33m==========================================================\033[0m\n"
+             << "[INFO] => per-IB overlays for " << tag
+             << " saved in " << outDirBase << "\n\n";
 
-    for(int i=0; i < totalBoards; i += boardsPerCanvas)
-    {
-        int chunkSize = std::min(boardsPerCanvas, totalBoards - i);
+   // 11) produce 6×5 tabulated best-fits
+   std::string tableFolder = (tag=="OLD")? "tabulatedBestFitsOld"
+                                         : "tabulatedBestFitsNew";
+   std::string outFolder= Form("%s/%s", outDirBase.c_str(), tableFolder.c_str());
+   gSystem->Exec(Form("mkdir -p %s", outFolder.c_str()));
 
-        TCanvas cTab(Form("tableOfBestFits_%s_page%d", tag.c_str(), pageIndex),
-                     Form("BestFits %s – page #%d", tag.c_str(), pageIndex),
-                     2000, 1800);
-        cTab.Divide(6,5, 0.001, 0.001);  // 6 across, 5 down
+   const int boardsPerCanvas = 6*5;
+   int totalBoards= (int)tabulated.size();
+   int pageIndex=0;
 
-        for(int j=0; j<chunkSize; j++){
-            int padIndex = j+1;
-            cTab.cd(padIndex);
+   for(int i=0; i< totalBoards; i+= boardsPerCanvas)
+   {
+       int chunkSize= std::min(boardsPerCanvas, totalBoards-i);
+       TCanvas cTab(Form("tableOfBestFits_%s_page%d", tag.c_str(), pageIndex),
+                    Form("BestFits %s – page #%d", tag.c_str(), pageIndex),
+                    2000,1800);
+       cTab.Divide(6,5, 0.001, 0.001);
 
-            const BestFitBoard &bfb = tabulated[i + j];
+       for(int j=0; j< chunkSize; j++){
+           int padIndex= j+1;
+           cTab.cd(padIndex);
 
-            // draw a mini-plot for the "bestW" only
-            TGraphErrors *gE = new TGraphErrors((int)bfb.bestWdata.size());
-            double minY=1e9, maxY=-1e9;
-            for(int k=0; k<(int)bfb.bestWdata.size(); k++){
-                double xx = bfb.bestWdata[k].x;
-                double yy = bfb.bestWdata[k].y;
-                double ee = bfb.bestWdata[k].e;
-                gE->SetPoint(k,xx,yy);
-                gE->SetPointError(k,0.,ee);
-                if(yy<minY) minY=yy;
-                if(yy>maxY) maxY=yy;
-            }
+           const BestFitBoard &bfb= tabulated[i+j];
+           std::cout << "[DEBUG] TabBoard => S="<<bfb.s<<", IB="<<bfb.ib
+                     <<", bestW="<<bfb.bestW<<", #points="
+                     <<bfb.bestWdata.size()<<std::endl;
 
-            double yLo= (minY>0 ? 0.8*minY : 0.);
-            double yHi= 1.2*maxY;
+           TGraphErrors *gE= new TGraphErrors((int)bfb.bestWdata.size());
+           double minY=1e9, maxY=-1e9;
+           for(int k=0; k<(int)bfb.bestWdata.size(); k++){
+               double xx= bfb.bestWdata[k].x;
+               double yy= bfb.bestWdata[k].y;
+               double ee= bfb.bestWdata[k].e;
+               gE->SetPoint(k,xx,yy);
+               gE->SetPointError(k,0.,ee);
+               if(yy<minY) minY=yy;
+               if(yy>maxY) maxY=yy;
+           }
 
-            gPad->DrawFrame(-2000,yLo,2000,yHi,
-                            Form("S%d.IB%d => bestW=%d;#Delta(mV);ADC",
-                                 bfb.s, bfb.ib, bfb.bestW));
-            gE->SetMarkerStyle(21);
-            gE->SetMarkerColor(kBlack);
-            gE->Draw("P SAME");
+           double yLo= (minY>0?0.8*minY:0.);
+           double yHi= 1.2*maxY;
 
-            // draw the best-fit line from the stored amplitude/k
-            TF1 fExp("fExpBW","[0]*exp([1]*x)",-1500,1500);
-            fExp.SetLineColor(kRed);
-            fExp.SetParameter(0, bfb.amplitude);
-            fExp.SetParameter(1, bfb.kParam);
+           gPad->DrawFrame(-2000,yLo,2000,yHi,
+                           Form("S%d.IB%d => bestW=%d;#Delta(mV);ADC",
+                                bfb.s,bfb.ib,bfb.bestW));
+           gE->SetMarkerStyle(21);
+           gE->SetMarkerColor(kBlack);
+           gE->Draw("P SAME");
+           
+           auto fExp = new TF1(Form("fExpBW_S%dIB%d_%d",  // unique name
+                                    bfb.s, bfb.ib, padIndex),
+                               "[0]*exp([1]*x)", -2000, 2000);
+           fExp->SetNpx(1000);
+           fExp->SetLineColor(kRed);
 
-            double parErr[2] = { bfb.amplitudeErr, bfb.kParamErr };
-            fExp.SetParErrors(parErr);
+           double A = bfb.amplitude;
+           double eA= bfb.amplitudeErr;
+           double K = bfb.kParam;
+           double eK= bfb.kParamErr;
 
-            fExp.Draw("SAME");
+           if(A<=0 || K<=0) {
+               std::cerr<<"[ERROR] TabBoard => invalid A or k => A="<<A
+                        <<", k="<<K<<std::endl;
+               std::exit(1);
+           }
+           fExp->SetParameter(0, A);
+           fExp->SetParameter(1, K);
+           double pErr[2] = { eA, eK };
+           fExp->SetParErrors(pErr);
 
-            // small annotation
-            {
-                TLatex ltx;
-                ltx.SetNDC(true);
-                ltx.SetTextSize(0.04);
-                double yAnn=0.75;
-                ltx.DrawLatex(0.15,yAnn, Form("A=%.1f #pm %.1f", bfb.amplitude, bfb.amplitudeErr));
-                yAnn -=0.06;
-                ltx.DrawLatex(0.15,yAnn, Form("k=%.3g #pm %.3g", bfb.kParam, bfb.kParamErr));
-            }
-        }
-        std::string outImg = Form("%s/bestFitsPage_%d.png", outFolder.c_str(), pageIndex);
-        cTab.SaveAs(outImg.c_str());
-        pageIndex++;
-    }
+           std::cout<<"[DEBUG]  => drawing red exp for Tab(S="<<bfb.s
+                    <<",IB="<<bfb.ib<<"): A="<<A<<",k="<<K<<std::endl;
 
-    std::cout << "[INFO] => Created " << pageIndex
-              << " tabulated best-fit pages for " << tag
-              << " in " << outFolder << std::endl;
+           fExp->Draw("L SAME");          // ‘L’ = line; ‘SAME’ = overlay
+
+           // annotation
+           {
+               TLatex ltx;
+               ltx.SetNDC(true);
+               ltx.SetTextSize(0.04);
+               double yAnn=0.75;
+               ltx.DrawLatex(0.15,yAnn,
+                             Form("A=%.1f #pm %.1f", A,eA));
+               yAnn -=0.06;
+               ltx.DrawLatex(0.15,yAnn,
+                             Form("k=%.3g #pm %.3g",K,eK));
+           }
+       }
+       std::string outImg= Form("%s/bestFitsPage_%d.png", outFolder.c_str(),pageIndex);
+       cTab.SaveAs(outImg.c_str());
+       std::cout<<"[DEBUG] => saved tabulated page => "<< outImg <<std::endl;
+
+       pageIndex++;
+   }
+
+   std::cout << "[INFO] => Created " << pageIndex
+             <<" tabulated best-fit pages for "<< tag
+             <<" in "<< outFolder << std::endl;
 }
-
-
 /*****************************************************************************
  *   High-level wrapper – decides a fixed colour per width *once*, then
  *   calls the low-level routine for OLD and NEW so colours match.
@@ -3545,26 +3641,6 @@ void doAnalysis(
         newFitMap
     );
     
-    //----------------------------------------------------------------------
-    // 2) Per-board multi-width overlays  (NEW!)
-    //----------------------------------------------------------------------
-    const std::string overlayDir =
-        "/Users/patsfan753/Desktop/PMTgainsAna/output/PerIBOverlays/compare";
-
-    // create the directory once
-    gSystem->Exec(Form("mkdir -p %s", overlayDir.c_str()));
-
-    std::vector<Kval>   kRatios;         // filled inside the routine
-    std::vector<AmpVal> amplitudeRatios; //     »       »       »
-
-    produceMultiWOverlayPlots(oldFitMap,
-                              newFitMap,
-                              /*multiW =*/overlayDir,
-                              /*summary=*/overlayDir,   // only used for a log line
-                              kRatios,
-                              amplitudeRatios);
-
-    produceCompare32vsBest(oldFitMap, newFitMap);
 
     //--------------------------------------------------------------
     produceColorCodedMapsAndExtra(
@@ -3590,6 +3666,26 @@ void doAnalysis(
                              sigmaK_new,
                              ampPNG);
 
+    //----------------------------------------------------------------------
+    // Per-board multi-width overlays  (NEW!)
+    //----------------------------------------------------------------------
+    const std::string overlayDir =
+        "/Users/patsfan753/Desktop/PMTgainsAna/output/PerIBOverlays/compare";
+
+    // create the directory once
+    gSystem->Exec(Form("mkdir -p %s", overlayDir.c_str()));
+
+    std::vector<Kval>   kRatios;         // filled inside the routine
+    std::vector<AmpVal> amplitudeRatios; //     »       »       »
+
+    produceMultiWOverlayPlots(oldFitMap,
+                              newFitMap,
+                              /*multiW =*/overlayDir,
+                              /*summary=*/overlayDir,   // only used for a log line
+                              kRatios,
+                              amplitudeRatios);
+
+    produceCompare32vsBest(oldFitMap, newFitMap);
 
     
     producePerIBOverlays(
